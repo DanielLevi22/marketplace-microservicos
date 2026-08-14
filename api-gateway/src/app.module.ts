@@ -8,6 +8,7 @@ import { MiddlewareModule } from './middleware/middleware.module';
 import { LoggingMiddleware } from './middleware/logging/logging.middleware';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './guards/throttler.guard';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports:  [
@@ -33,6 +34,7 @@ import { CustomThrottlerGuard } from './guards/throttler.guard';
     ]),
     ProxyModule,
     MiddlewareModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
