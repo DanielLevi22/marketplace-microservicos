@@ -60,7 +60,7 @@ async function bootstrap() {
     }),
   );
 
-   const config = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('Marketplace API Gateway')
     .setDescription(
       `
@@ -112,9 +112,15 @@ async function bootstrap() {
     .addTag('Health', 'Endpoints para monitoramento de saúde')
     .build();
 
-
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {},
+    customSiteTitle: 'Marketplace API Gateway Documentation',
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info .title { color: #3b82f6 }
+    `,
+  });
 
   const port = process.env.PORT || 3005;
   await app.listen(port);

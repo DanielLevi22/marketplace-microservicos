@@ -12,21 +12,40 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'User login'})
-  @ApiResponse({ status: 200, description: 'Login successful'})
-  @ApiResponse({ status: 401, description: 'Invalid credentials'})
-  @Throttle({short:{ limit: 5, ttl: 60000 }})
+  @ApiOperation({
+    summary: 'Login do usuário',
+    description: 'Autentica um usuário e retorna JWT e session token',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login realizado com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        user: { type: 'object' },
+        accessToken: { type: 'string' },
+        sessionToken: { type: 'string' },
+        expiresIn: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Credenciais inválidas' })
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto)
+    return this.authService.login(loginDto);
   }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'User registration'})
-  @ApiResponse({ status: 201, description: 'Registration successful'})
-  @ApiResponse({ status: 400, description: 'Invalid registration data'})
-  @Throttle({ mediium :{ limit: 3, ttl: 60000 }})
+  @ApiOperation({
+    summary: 'Registro de usuário',
+    description: 'Cria uma nova conta de usuário no sistema',
+  })
+  @ApiResponse({ status: 201, description: 'Usuário registrado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 409, description: 'Email já cadastrado' })
+  @Throttle({ medium: { limit: 3, ttl: 60000 } })
   async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto)
+    return this.authService.register(registerDto);
   }
 }
