@@ -5,7 +5,7 @@ import { CircuitBreakerModule } from 'src/common/circuit-breaker/circuit-breaker
 
 
 @Module({  
-  imports: [HttpModule,CircuitBreakerModule],
+  imports: [HttpModule, CircuitBreakerModule],
   providers: [ProxyService],
   exports: [ProxyService]
 })
