@@ -7,7 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
-import { User } from '../src/users/entities/user.entity';
+import { User, UserStatus } from '../src/users/entities/user.entity';
 
 interface RegisterResponseBody {
   id: string;
@@ -20,9 +20,27 @@ interface RegisterResponseBody {
   updatedAt: string;
 }
 
+interface LoginResponseBody {
+  user: RegisterResponseBody;
+  token: string;
+}
+
 interface ValidationErrorResponseBody {
   message: string[];
 }
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: string;
+  iat: number;
+  exp: number;
+}
+
+const decodeJwtPayload = (token: string): JwtPayload => {
+  const payload = token.split('.')[1];
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as JwtPayload;
+};
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
@@ -180,4 +198,137 @@ describe('AuthController (e2e)', () => {
   // AC6: AuthModule reaproveita o repositório User já registrado em UsersModule
   // (verificado estruturalmente — único TypeOrmModule.forFeature([User]) no
   // projeto, ver users-service/src/users/users.module.ts — não é testável via HTTP)
+
+  describe('/auth/login (POST)', () => {
+    const registerUser = async () => {
+      const payload = validPayload();
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(payload)
+        .expect(201);
+      return payload;
+    };
+
+    // Login AC1/AC2: credenciais corretas retornam user (sem password) + token
+    // com sub/email/role corretos e expiração de ~24h
+    it('returns the user and a valid JWT for correct credentials', async () => {
+      const payload = await registerUser();
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: payload.password })
+        .expect(200);
+
+      const body = response.body as LoginResponseBody;
+      expect(body.user).toMatchObject({
+        email: payload.email,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        role: payload.role,
+        status: 'active',
+      });
+      expect(body.user).not.toHaveProperty('password');
+      expect(body.token).toBeDefined();
+
+      const decoded = decodeJwtPayload(body.token);
+      expect(decoded.sub).toBe(body.user.id);
+      expect(decoded.email).toBe(payload.email);
+      expect(decoded.role).toBe(payload.role);
+
+      const expiresInSeconds = decoded.exp - decoded.iat;
+      expect(expiresInSeconds).toBe(24 * 60 * 60);
+    });
+
+    // Login AC3: email não cadastrado retorna 401 com mensagem genérica
+    it('returns 401 "Credenciais inválidas" for an email that does not exist', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: uniqueEmail(), password: 'secret123' })
+        .expect(401);
+
+      expect(response.body).toMatchObject({ message: 'Credenciais inválidas' });
+    });
+
+    // Login AC4: senha incorreta retorna 401 com a mesma mensagem genérica
+    it('returns 401 "Credenciais inválidas" for a wrong password', async () => {
+      const payload = await registerUser();
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: 'wrong-password' })
+        .expect(401);
+
+      expect(response.body).toMatchObject({ message: 'Credenciais inválidas' });
+    });
+
+    // Login AC5: credenciais corretas mas conta inativa retorna 401 "Conta inativa"
+    it('returns 401 "Conta inativa" when the account status is not active', async () => {
+      const payload = await registerUser();
+      await userRepository.update(
+        { email: payload.email },
+        { status: UserStatus.INACTIVE },
+      );
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: payload.password })
+        .expect(401);
+
+      expect(response.body).toMatchObject({ message: 'Conta inativa' });
+    });
+
+    // Login AC6: payload inválido retorna 400 e nenhuma autenticação é tentada
+    const invalidLoginCases: Array<[string, Record<string, unknown>]> = [
+      ['missing email', { email: undefined }],
+      ['malformed email', { email: 'not-an-email' }],
+      ['missing password', { password: undefined }],
+      ['password shorter than 6 chars', { password: '123' }],
+    ];
+
+    it.each(invalidLoginCases)(
+      '/auth/login (POST) returns 400 for %s',
+      async (_description, overrides) => {
+        const payload = {
+          email: uniqueEmail(),
+          password: 'secret123',
+          ...overrides,
+        };
+
+        const response = await request(app.getHttpServer())
+          .post('/auth/login')
+          .send(payload)
+          .expect(400);
+
+        const body = response.body as ValidationErrorResponseBody;
+        expect(Array.isArray(body.message)).toBe(true);
+        expect(body.message.length).toBeGreaterThan(0);
+      },
+    );
+
+    it('/auth/login (POST) returns 400 when an undeclared field is sent', async () => {
+      const payload = await registerUser();
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: payload.password, remember: true })
+        .expect(400);
+    });
+
+    // Login AC7: em nenhuma resposta (sucesso ou erro) o password é exposto
+    it('never exposes the password field in any login response', async () => {
+      const payload = await registerUser();
+
+      const success = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: payload.password })
+        .expect(200);
+      expect(JSON.stringify(success.body)).not.toContain(payload.password);
+
+      const failure = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: 'wrong-password' })
+        .expect(401);
+      expect(failure.body).not.toHaveProperty('password');
+    });
+  });
 });
