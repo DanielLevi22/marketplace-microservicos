@@ -39,7 +39,9 @@ interface JwtPayload {
 
 const decodeJwtPayload = (token: string): JwtPayload => {
   const payload = token.split('.')[1];
-  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as JwtPayload;
+  return JSON.parse(
+    Buffer.from(payload, 'base64url').toString('utf8'),
+  ) as JwtPayload;
 };
 
 describe('AuthController (e2e)', () => {
@@ -310,7 +312,11 @@ describe('AuthController (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: payload.email, password: payload.password, remember: true })
+        .send({
+          email: payload.email,
+          password: payload.password,
+          remember: true,
+        })
         .expect(400);
     });
 
