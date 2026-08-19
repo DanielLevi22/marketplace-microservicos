@@ -64,6 +64,22 @@ Dados do usuário criado, exceto a senha:
 | `createdAt` | timestamp |
 | `updatedAt` | timestamp |
 
+## Diagrama de Fluxo
+
+```mermaid
+flowchart TD
+    A[Cliente] -->|POST /auth/register| B[ValidationPipe]
+    B -->|dados inválidos| C[400 Bad Request]
+    B -->|dados válidos| D[AuthController.register]
+    D --> E[AuthService.register]
+    E --> F{Email já cadastrado?}
+    F -->|Sim| G[409 Conflict]
+    F -->|Não| H[Hash da senha - bcrypt, 10 salt rounds]
+    H --> I[Persiste usuário - status: active]
+    I --> J[Monta resposta sem o campo password]
+    J --> K[201 Created]
+```
+
 ## Respostas Esperadas
 
 | Situação | Status | Corpo |
