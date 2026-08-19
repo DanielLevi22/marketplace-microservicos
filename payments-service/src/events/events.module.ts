@@ -1,0 +1,20 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { PaymentConsumerService } from './payment-consumer/payment-consumer.service';
+import { PaymentQueueService } from './payment-queue/payment-queue.service';
+import { RabbitmqService } from './rabbitmq/rabbitmq.service';
+import { DlqService } from './dlq/dlq.service';
+import { DlqController } from './dlq/dlq.controller';
+import { MetricsController } from './metrics/metrics.controller';
+
+@Module({
+  imports: [ConfigModule],
+  controllers: [DlqController, MetricsController],
+  providers: [
+    RabbitmqService,
+    PaymentQueueService,
+    PaymentConsumerService,
+    DlqService,
+  ],
+})
+export class EventsModule {}
