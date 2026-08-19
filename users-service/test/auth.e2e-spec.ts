@@ -44,6 +44,10 @@ const decodeJwtPayload = (token: string): JwtPayload => {
   ) as JwtPayload;
 };
 
+// Spec 04-guards-protecao-rotas-jwt.md RF07/AC5: nenhuma requisição abaixo
+// envia header Authorization, e os testes de register/login continuam
+// esperando sucesso — comprova que essas rotas seguem públicas mesmo com o
+// JwtAuthGuard global ativo (ver test/app.e2e-spec.ts para os testes do guard).
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
   let userRepository: Repository<User>;
