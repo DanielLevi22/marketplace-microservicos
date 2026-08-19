@@ -8,7 +8,7 @@ Por ser um projeto de curso, o código deve ser enxuto: implemente apenas o que 
 
 Toda atividade (feature, scaffold, correção relevante) segue este fluxo, nesta ordem:
 
-1. **Criação da spec** — documento de requisitos funcionais e estrutura de dados (sem código), salvo em `<serviço>/docs/specs/NN-nome-da-atividade.md`, com prefixo numérico sequencial (ex.: `01-scaffold.md`, `02-users-crud.md`). A spec descreve o quê e o porquê, não o como implementar.
+1. **Criação da spec** — documento de requisitos funcionais e estrutura de dados (sem código), salvo em `<serviço>/docs/specs/NN-nome-da-atividade.md`, com prefixo numérico sequencial (ex.: `01-scaffold.md`, `02-users-crud.md`). A spec descreve o quê e o porquê, não o como implementar. Toda spec deve incluir um diagrama visual (mermaid) do fluxo completo da implementação descrita.
 2. **Análise (PR da spec)** — abrir PR contendo apenas o arquivo da spec, para revisão e aprovação do escopo antes de qualquer código ser escrito.
 3. **Plano de desenvolvimento** — com a spec aprovada, gerar um plano de implementação (passos concretos, arquivos afetados, padrão a seguir) e alinhar com o responsável antes de codar.
 4. **Testes** — implementar o plano e cobrir com testes (unitários e/ou e2e, conforme a spec). A atividade só é considerada pronta quando os testes passam.
