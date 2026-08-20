@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -25,5 +29,28 @@ export class ProductsService {
     });
 
     return this.productsRepository.save(product);
+  }
+
+  findAllActive() {
+    return this.productsRepository.find({
+      where: { isActive: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  findBySeller(sellerId: string) {
+    return this.productsRepository.find({
+      where: { isActive: true, sellerId },
+    });
+  }
+
+  async findOne(id: string) {
+    const product = await this.productsRepository.findOne({ where: { id } });
+
+    if (!product) {
+      throw new NotFoundException('Produto não encontrado');
+    }
+
+    return product;
   }
 }
