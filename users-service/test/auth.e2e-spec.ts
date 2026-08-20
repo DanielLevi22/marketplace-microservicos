@@ -341,4 +341,45 @@ describe('AuthController (e2e)', () => {
       expect(failure.body).not.toHaveProperty('password');
     });
   });
+
+  // Spec 06-integracao-api-gateway.md RF01: endpoint usado internamente pelo
+  // api-gateway para validar um token e obter userId/email/role.
+  describe('/auth/validate-token (GET)', () => {
+    const registerAndLogin = async () => {
+      const payload = validPayload();
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(payload)
+        .expect(201);
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: payload.email, password: payload.password })
+        .expect(200);
+
+      const body = loginResponse.body as LoginResponseBody;
+      return { payload, user: body.user, token: body.token };
+    };
+
+    it('returns 401 without an Authorization header', () => {
+      return request(app.getHttpServer())
+        .get('/auth/validate-token')
+        .expect(401);
+    });
+
+    it('returns userId, email and role for a valid token', async () => {
+      const { user, token } = await registerAndLogin();
+
+      const response = await request(app.getHttpServer())
+        .get('/auth/validate-token')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+    });
+  });
 });
