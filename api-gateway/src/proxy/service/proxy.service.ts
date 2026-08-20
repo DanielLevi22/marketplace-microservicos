@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { serviceConfig } from 'src/config/gateway.config';
 import { firstValueFrom } from 'rxjs';
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 import { CircuitBreakerService } from 'src/common/circuit-breaker/circuit-breaker.service';
 import { CacheFallbackService } from 'src/common/fallback/cache.fallback';
 import { DefaultFallbackService } from 'src/common/fallback/default.fallback';
@@ -56,7 +56,7 @@ export class ProxyService {
                   'x-user-role': userInfo?.role,
                 };
 
-                let response;
+                let response: AxiosResponse<unknown>;
                 try {
                   response = await firstValueFrom(
                     this.httpService.request<unknown>({
