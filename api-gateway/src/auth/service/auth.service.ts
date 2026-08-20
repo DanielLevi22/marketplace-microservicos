@@ -1,8 +1,8 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
 import { serviceConfig } from 'src/config/gateway.config';
+import { ProxyService } from 'src/proxy/service/proxy.service';
 import type { RegisterDto } from '../dtos/register.dto';
 import type { LoginDto } from '../dtos/login.dto';
 
@@ -18,31 +18,12 @@ export interface UserSession {
   } | null;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-  };
-}
-
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly jwtService: JwtService,
     private readonly httpService: HttpService,
+    private readonly proxyService: ProxyService,
   ) {}
-
-  validateJwtToken(token: string): Promise<AuthResponse> {
-    try {
-      return this.jwtService.verify(token);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid JWT token');
-    }
-  }
 
   async validateSessionToken(sessionToken: string): Promise<UserSession> {
     try {
@@ -54,37 +35,33 @@ export class AuthService {
       );
 
       return data;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid session token');
     }
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async login(loginDto: LoginDto): Promise<unknown> {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.post(`${serviceConfig.users.url}/login`, loginDto, {
-          timeout: serviceConfig.users.timeout,
-        }),
+      return await this.proxyService.proxyRequest(
+        'users',
+        'post',
+        '/auth/login',
+        loginDto,
       );
-
-      return data;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid login credentials');
     }
   }
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
+  async register(registerDto: RegisterDto): Promise<unknown> {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.post(
-          `${serviceConfig.users.url}/auth/register`,
-          registerDto,
-          { timeout: serviceConfig.users.timeout },
-        ),
+      return await this.proxyService.proxyRequest(
+        'users',
+        'post',
+        '/auth/register',
+        registerDto,
       );
-
-      return data;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Registration failed');
     }
   }
