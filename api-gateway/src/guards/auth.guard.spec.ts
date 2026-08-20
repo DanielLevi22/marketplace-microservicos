@@ -1,7 +1,8 @@
-import { AuthGuard } from '../auth/guards/auth.guard';
+import { Reflector } from '@nestjs/core';
+import { JwtAuthGuard } from './auth.guard';
 
-describe('AuthGuard', () => {
+describe('JwtAuthGuard', () => {
   it('should be defined', () => {
-    expect(new AuthGuard()).toBeDefined();
+    expect(new JwtAuthGuard(new Reflector())).toBeDefined();
   });
 });
