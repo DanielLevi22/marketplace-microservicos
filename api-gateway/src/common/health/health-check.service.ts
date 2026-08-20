@@ -40,7 +40,7 @@ export class HealthCheckService {
           timeout: 60000,
           resetTimeout: 30000,
         },
-        async () => {
+        () => {
           throw new Error('Circuit breaker fallback');
         },
       );
@@ -99,7 +99,10 @@ export class HealthCheckService {
           status: HealthStatus.UNHEALTHY,
           responseTime: 0,
           lastCheck: new Date(),
-          error: result.reason?.message || 'Unknown error',
+          error:
+            result.reason instanceof Error
+              ? result.reason
+              : new Error('Unknown error'),
         };
       }
     });

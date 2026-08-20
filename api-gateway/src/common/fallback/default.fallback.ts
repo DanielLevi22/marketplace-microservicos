@@ -8,10 +8,10 @@ export class DefaultFallbackService {
     defaultResponse: T,
     serviceName: string,
   ): () => Promise<T> {
-    return async (): Promise<T> => {
+    return (): Promise<T> => {
       this.logger.warn(`Using default fallback for ${serviceName}`);
 
-      return defaultResponse;
+      return Promise.resolve(defaultResponse);
     };
   }
 
@@ -19,25 +19,25 @@ export class DefaultFallbackService {
     serviceName: string,
     errorMessage: string,
   ): () => Promise<never> {
-    return async (): Promise<never> => {
+    return (): never => {
       this.logger.error(`Fallback error for ${serviceName}: ${errorMessage}`);
       throw new Error(`${serviceName} service unavailable: ${errorMessage}`);
     };
   }
 
   createEmptyArrayFallback<T>(serviceName: string): () => Promise<T[]> {
-    return async (): Promise<T[]> => {
+    return (): Promise<T[]> => {
       this.logger.warn(`Using empty array fallback for ${serviceName}`);
 
-      return [];
+      return Promise.resolve([]);
     };
   }
 
   createEmptyObjectFallback<T>(serviceName: string): () => Promise<T> {
-    return async (): Promise<T> => {
+    return (): Promise<T> => {
       this.logger.warn(`Using empty object fallback for ${serviceName}`);
 
-      return {} as T;
+      return Promise.resolve({} as T);
     };
   }
 }

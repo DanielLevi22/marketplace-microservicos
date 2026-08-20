@@ -24,7 +24,7 @@ export class CircuitBreakerService {
     const config = { ...this.defaultOptions, ...options };
     const circuit = this.getOrCreateCircuit(key, config);
 
-    if (circuit.state === 'OPEN') {
+    if (circuit.state === CircuitBreakerStateEnum.OPEN) {
       if (Date.now() < circuit.nextAttemptTime) {
         this.logger.warn(`Circuit breaker OPEN for ${key}, using fallback`);
 
