@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import  { ProxyService } from './proxy/service/proxy.service';
+import { ProxyService } from './proxy/service/proxy.service';
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly appService: AppService  ,
+    private readonly appService: AppService,
     private readonly proxyService: ProxyService,
   ) {}
 
@@ -13,5 +13,4 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
-
 }

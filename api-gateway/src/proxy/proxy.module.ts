@@ -6,8 +6,7 @@ import { FallbackModule } from 'src/common/fallback/fallback.module';
 import { TimeoutModule } from 'src/common/timeout/timeout.module';
 import { RetryModule } from 'src/common/retry/retry.module';
 
-
-@Module({  
+@Module({
   imports: [
     HttpModule,
     CircuitBreakerModule,
@@ -16,6 +15,6 @@ import { RetryModule } from 'src/common/retry/retry.module';
     RetryModule,
   ],
   providers: [ProxyService],
-  exports: [ProxyService]
+  exports: [ProxyService],
 })
 export class ProxyModule {}

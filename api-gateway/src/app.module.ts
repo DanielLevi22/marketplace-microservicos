@@ -1,7 +1,11 @@
-import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import {
+  Module,
+  type MiddlewareConsumer,
+  type NestModule,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule,  ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ProxyModule } from './proxy/proxy.module';
 import { MiddlewareModule } from './middleware/middleware.module';
@@ -17,11 +21,11 @@ import { TimeoutModule } from './common/timeout/timeout.module';
 import { RetryModule } from './common/retry/retry.module';
 
 @Module({
-  imports:  [
+  imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-     ThrottlerModule.forRootAsync({
+    ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => [
         {
@@ -50,19 +54,19 @@ import { RetryModule } from './common/retry/retry.module';
     FallbackModule,
     CircuitBreakerModule,
     TimeoutModule,
-    RetryModule
+    RetryModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-  {
-    provide: APP_GUARD,
-    useClass: CustomThrottlerGuard,
-  }
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
-   configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggingMiddleware).forRoutes('*');
   }
 }

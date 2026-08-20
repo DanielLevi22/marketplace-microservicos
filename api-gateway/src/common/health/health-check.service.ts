@@ -65,21 +65,19 @@ export class HealthCheckService {
         status: HealthStatus.UNHEALTHY,
         responseTime,
         lastCheck: new Date(),
-        error:       error instanceof Error
-        ? error
-        : new Error('Unknown error'),
+        error: error instanceof Error ? error : new Error('Unknown error'),
       };
       this.healthCache.set(serviceName, serviceHealth);
       this.logger.error(
         `Health check failed for ${serviceName}`,
-         error instanceof Error ? error.message : 'Unknown error',
+        error instanceof Error ? error.message : 'Unknown error',
       );
 
       return serviceHealth;
     }
   }
 
-   async checkAllServices(): Promise<ServiceHealth[]> {
+  async checkAllServices(): Promise<ServiceHealth[]> {
     const services: (keyof typeof serviceConfig)[] = [
       'users',
       'products',

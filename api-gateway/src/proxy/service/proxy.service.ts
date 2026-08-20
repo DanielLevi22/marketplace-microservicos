@@ -29,7 +29,7 @@ export class ProxyService {
     private readonly retryService: RetryService,
   ) {}
 
-   async proxyRequest(
+  async proxyRequest(
     serviceName: keyof typeof serviceConfig,
     method: string,
     path: string,
@@ -59,7 +59,7 @@ export class ProxyService {
 
                 const response = await firstValueFrom(
                   this.httpService.request({
-                    method: method.toLowerCase() as HttpMethod,
+                    method: method.toLowerCase(),
                     url,
                     data,
                     headers: enhancedHeaders,
