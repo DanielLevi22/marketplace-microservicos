@@ -1,7 +1,8 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { serviceConfig } from 'src/config/gateway.config';
 import { firstValueFrom } from 'rxjs';
+import axios from 'axios';
 import { CircuitBreakerService } from 'src/common/circuit-breaker/circuit-breaker.service';
 import { CacheFallbackService } from 'src/common/fallback/cache.fallback';
 import { DefaultFallbackService } from 'src/common/fallback/default.fallback';
@@ -55,15 +56,27 @@ export class ProxyService {
                   'x-user-role': userInfo?.role,
                 };
 
-                const response = await firstValueFrom(
-                  this.httpService.request<unknown>({
-                    method: method.toLowerCase(),
-                    url,
-                    data,
-                    headers: enhancedHeaders,
-                    timeout: service.timeout,
-                  }),
-                );
+                let response;
+                try {
+                  response = await firstValueFrom(
+                    this.httpService.request<unknown>({
+                      method: method.toLowerCase(),
+                      url,
+                      data,
+                      headers: enhancedHeaders,
+                      timeout: service.timeout,
+                    }),
+                  );
+                } catch (error) {
+                  if (axios.isAxiosError(error) && error.response) {
+                    throw new HttpException(
+                      error.response.data as Record<string, unknown>,
+                      error.response.status,
+                    );
+                  }
+
+                  throw error;
+                }
 
                 if (method.toLowerCase() === 'get') {
                   this.cacheFallbackService.setCachedData(
