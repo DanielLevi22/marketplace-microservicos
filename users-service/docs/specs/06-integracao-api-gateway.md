@@ -53,6 +53,12 @@ O `AuthController` do gateway importava `LoginDto`/`RegisterDto` como `import ty
 ### RF13 — Correção do glob de entidades do TypeORM no users-service
 O `users-service` define suas entidades em `database.config.ts` com o glob `*.entity{.ts,js}`, que é inválido (falta o `.` antes do grupo `{ts,js}`): expande para `*.entity.ts` ou `*.entityjs`, nunca `*.entity.js`. Isso faz com que, ao rodar a partir do build compilado (`nest start`, `nest start --watch`, `nest start:prod` — o cenário real de uso, fora dos testes que rodam via `ts-jest` direto do `.ts`), nenhuma entidade seja registrada no TypeORM, e qualquer operação de banco (registro, login, consultas) falhe com `500 Internal Server Error` (`EntityMetadataNotFoundError`). Corrigido o glob para `*.entity.{ts,js}`.
 
+### RF14 — Correção de dependências injetadas importadas como `import type` no gateway
+`JwtAuthGuard`, `RoleGuard` (dependem de `Reflector`) e `SessionGuard` (depende de `AuthService`) importavam essas dependências com `import type`, que remove a classe em tempo de execução. Como a injeção de dependência do Nest depende da classe real (via metadata de reflexão) para resolver o que injetar no construtor, essas guards recebiam `undefined` na dependência e quebravam com `TypeError` ao serem ativadas — o que só foi detectado ao aplicar `JwtAuthGuard` de fato em `/users/*` (RF06), já que nenhuma dessas guards era usada em nenhuma rota antes desta integração. Corrigido trocando para import normal nos três arquivos.
+
+### RF15 — Correção do `rootDir` do Jest e2e no gateway
+Após corrigir o `moduleNameMapper` (RF10), o `test/jest-e2e.json` ainda usava `"rootDir": "."`, que o Jest resolve relativo ao diretório do próprio arquivo de config (`test/`), não à raiz do pacote — fazendo o mapeamento de `src/...` apontar para `test/src/...` (inexistente) e todo teste e2e que importe algo do `ProxyService` (direta ou indiretamente, como qualquer um que importe `AppModule`) falhar ao carregar. Corrigido para `"rootDir": ".."`.
+
 ## Fluxo Esperado
 
 1. Um cliente faz uma requisição a uma rota `/auth/*` ou `/users/*` na porta do gateway (3005).
