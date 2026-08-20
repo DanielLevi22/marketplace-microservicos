@@ -5,6 +5,11 @@ import {
   Injectable,
 } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
+
+interface AuthenticatedRequest extends Request {
+  user?: { role: string };
+}
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -20,7 +25,7 @@ export class RoleGuard implements CanActivate {
       return true;
     }
 
-    const user = context.switchToHttp().getRequest().user;
+    const user = context.switchToHttp().getRequest<AuthenticatedRequest>().user;
 
     if (!user || !user.role) {
       throw new ForbiddenException('User role not found');

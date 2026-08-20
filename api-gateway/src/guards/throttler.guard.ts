@@ -4,19 +4,26 @@ import {
   ThrottlerGuard,
   type ThrottlerRequest,
 } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
 
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
-  protected async getTracker(req: Record<string, any>): Promise<string> {
-    return `${req.ip}-${req.headers['user-agent']}`;
+  protected getTracker(req: Request): Promise<string> {
+    return Promise.resolve(`${req.ip}-${req.headers['user-agent']}`);
   }
 
   protected async handleRequest(
     requestProps: ThrottlerRequest,
   ): Promise<boolean> {
     const { context, ttl, limit } = requestProps;
-    const { req, res } = this.getRequestResponse(context);
-    const throttles = this.reflector.get('throttle', context.getHandler());
+    const { req, res } = this.getRequestResponse(context) as {
+      req: Request;
+      res: Response;
+    };
+    const throttles = this.reflector.get<Record<string, unknown> | undefined>(
+      'throttle',
+      context.getHandler(),
+    );
     const throttleName = throttles ? Object.keys(throttles)[0] : 'default';
     const tracker = await this.getTracker(req);
     const key = this.generateKey(context, tracker, throttleName);
