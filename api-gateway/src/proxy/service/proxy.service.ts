@@ -8,7 +8,7 @@ import { DefaultFallbackService } from 'src/common/fallback/default.fallback';
 import { TimeoutService } from 'src/common/timeout/timeout.service';
 import { RetryService } from 'src/common/retry/retry.service';
 
-interface UserInfo {
+export interface UserInfo {
   userId: string;
   email: string;
   role: string;
