@@ -5,7 +5,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import type { AuthService, UserSession } from '../auth/service/auth.service';
+import { AuthService } from '../auth/service/auth.service';
+import type { UserSession } from '../auth/service/auth.service';
 
 interface AuthenticatedRequest extends Omit<Request, 'user'> {
   user?: UserSession['user'];
