@@ -203,4 +203,149 @@ describe('Products (e2e)', () => {
       .send({ ...validPayload, sellerId: randomUUID() })
       .expect(400);
   });
+
+  describe('GET /products', () => {
+    afterEach(async () => {
+      await productsRepository.clear();
+    });
+
+    it('returns 200 without a token', () => {
+      return request(app.getHttpServer()).get('/products').expect(200);
+    });
+
+    it('returns only active products ordered by createdAt desc', async () => {
+      const older = await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: randomUUID(),
+          isActive: true,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+        }),
+      );
+      const newer = await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: randomUUID(),
+          isActive: true,
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+        }),
+      );
+      await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: randomUUID(),
+          isActive: false,
+        }),
+      );
+
+      const res = await request(app.getHttpServer())
+        .get('/products')
+        .expect(200);
+
+      const body = res.body as Array<{ id: string }>;
+      expect(body).toHaveLength(2);
+      expect(body.map((p) => p.id)).toEqual([newer.id, older.id]);
+    });
+  });
+
+  describe('GET /products/seller/:sellerId', () => {
+    afterEach(async () => {
+      await productsRepository.clear();
+    });
+
+    it('returns 200 without a token', () => {
+      return request(app.getHttpServer())
+        .get(`/products/seller/${randomUUID()}`)
+        .expect(200);
+    });
+
+    it('returns only active products of the given seller', async () => {
+      const sellerId = randomUUID();
+      const otherSellerId = randomUUID();
+
+      const ownProduct = await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId,
+          isActive: true,
+        }),
+      );
+      await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId,
+          isActive: false,
+        }),
+      );
+      await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: otherSellerId,
+          isActive: true,
+        }),
+      );
+
+      const res = await request(app.getHttpServer())
+        .get(`/products/seller/${sellerId}`)
+        .expect(200);
+
+      const body = res.body as Array<{ id: string }>;
+      expect(body).toHaveLength(1);
+      expect(body[0].id).toBe(ownProduct.id);
+    });
+
+    it('returns an empty list when the seller has no products', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/products/seller/${randomUUID()}`)
+        .expect(200);
+
+      expect(res.body).toEqual([]);
+    });
+  });
+
+  describe('GET /products/:id', () => {
+    afterEach(async () => {
+      await productsRepository.clear();
+    });
+
+    it('returns 200 without a token', async () => {
+      const product = await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: randomUUID(),
+          isActive: true,
+        }),
+      );
+
+      return request(app.getHttpServer())
+        .get(`/products/${product.id}`)
+        .expect(200);
+    });
+
+    it('returns the product data when it exists', async () => {
+      const product = await productsRepository.save(
+        productsRepository.create({
+          ...validPayload,
+          sellerId: randomUUID(),
+          isActive: true,
+        }),
+      );
+
+      const res = await request(app.getHttpServer())
+        .get(`/products/${product.id}`)
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        id: product.id,
+        name: validPayload.name,
+        sellerId: product.sellerId,
+      });
+    });
+
+    it('returns 404 when the product does not exist', () => {
+      return request(app.getHttpServer())
+        .get(`/products/${randomUUID()}`)
+        .expect(404);
+    });
+  });
 });
