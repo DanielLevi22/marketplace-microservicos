@@ -14,8 +14,6 @@ interface UserInfo {
   role: string;
 }
 
-type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
-
 @Injectable()
 export class ProxyService {
   private readonly logger = new Logger(ProxyService.name);
@@ -36,7 +34,7 @@ export class ProxyService {
     data?: unknown,
     headers?: Record<string, string>,
     userInfo?: UserInfo,
-  ) {
+  ): Promise<unknown> {
     const service = serviceConfig[serviceName];
     const url = `${service.url}${path}`;
 
@@ -58,7 +56,7 @@ export class ProxyService {
                 };
 
                 const response = await firstValueFrom(
-                  this.httpService.request({
+                  this.httpService.request<unknown>({
                     method: method.toLowerCase(),
                     url,
                     data,
