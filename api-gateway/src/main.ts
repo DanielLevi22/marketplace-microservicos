@@ -27,7 +27,10 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin) return callback(null, true);
 
       const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['*'];
@@ -129,4 +132,4 @@ async function bootstrap() {
   console.log(`📚 Swagger documentation: <http://localhost>:${port}/api`);
 }
 
-bootstrap();
+void bootstrap();
