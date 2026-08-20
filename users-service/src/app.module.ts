@@ -6,9 +6,15 @@ import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
-  imports: [TypeOrmModule.forRoot(databaseConfig), UsersModule, AuthModule],
+  imports: [
+    TypeOrmModule.forRoot(databaseConfig),
+    UsersModule,
+    AuthModule,
+    HealthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
