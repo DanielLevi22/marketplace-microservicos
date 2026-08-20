@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { UnauthorizedException } from '@nestjs/common';
+import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { ProxyService } from 'src/proxy/service/proxy.service';
 import { AuthService } from './auth.service';
 import type { RegisterDto } from '../dtos/register.dto';
@@ -47,7 +47,22 @@ describe('AuthService', () => {
       expect(result).toBe(response);
     });
 
-    it('throws UnauthorizedException when the proxy call fails', async () => {
+    it('rethrows the real HttpException from the users service', async () => {
+      const invalidCredentials = new HttpException(
+        'Credenciais inválidas',
+        401,
+      );
+      proxyService.proxyRequest.mockRejectedValue(invalidCredentials);
+
+      await expect(
+        service.login({
+          email: 'jane@example.com',
+          password: 'wrong',
+        }),
+      ).rejects.toBe(invalidCredentials);
+    });
+
+    it('throws a generic UnauthorizedException on infrastructure failure', async () => {
       proxyService.proxyRequest.mockRejectedValue(new Error('boom'));
 
       await expect(
@@ -81,7 +96,16 @@ describe('AuthService', () => {
       expect(result).toBe(response);
     });
 
-    it('throws UnauthorizedException when the proxy call fails', async () => {
+    it('rethrows the real HttpException from the users service', async () => {
+      const emailConflict = new HttpException('Email já cadastrado', 409);
+      proxyService.proxyRequest.mockRejectedValue(emailConflict);
+
+      await expect(service.register({} as RegisterDto)).rejects.toBe(
+        emailConflict,
+      );
+    });
+
+    it('throws a generic UnauthorizedException on infrastructure failure', async () => {
       proxyService.proxyRequest.mockRejectedValue(new Error('boom'));
 
       await expect(service.register({} as RegisterDto)).rejects.toThrow(
