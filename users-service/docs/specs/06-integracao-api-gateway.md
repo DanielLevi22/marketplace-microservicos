@@ -38,6 +38,15 @@ Em toda requisição encaminhada ao `users-service` que originalmente contenha o
 ### RF08 — Uso da infraestrutura de proxy existente
 O encaminhamento das rotas `/auth/*` e `/users/*` (RF05, RF06) deve ser feito através da infraestrutura de proxy já existente no gateway (circuit breaker, retry e timeout), e não por chamadas HTTP diretas e paralelas a essa infraestrutura.
 
+### RF09 — Correção do wiring quebrado do `JwtAuthGuard` do gateway
+Ao investigar RF05/RF06/RF07, constatou-se que o `JwtAuthGuard` do gateway não funciona hoje: sua `JwtStrategy` não está registrada como provider (uso do guard falharia em runtime), o método `validate()` chama um método que sempre lança erro (referencia um campo inexistente no payload real do JWT), e o `JWT_SECRET` diverge entre os `.env` de todos os serviços (`users-service`, `api-gateway`, `checkout-service`, `payments-service`), impedindo a verificação local da assinatura. O gateway deve corrigir esse wiring — sem alterar a arquitetura do guard (continua validando o token localmente via Passport) — para que RF06/RF07 funcionem de fato, e o `JWT_SECRET` deve ser o mesmo em todos os serviços do projeto.
+
+### RF10 — Correção de dívida técnica de lint pré-existente no api-gateway
+O `api-gateway` acumula, hoje, um conjunto de problemas de lint pré-existentes (não introduzidos por esta atividade) e alguns testes unitários quebrados (`auth.guard.spec.ts` com import de caminho inexistente, `throttler.guard.spec.ts` instanciando a classe errada, `proxy.service.spec.ts` sem mock de `HttpService`). Essa dívida deve ser corrigida como parte desta atividade, deixando `npm run lint` e `npm run test` limpos no `api-gateway`, sem alterar o comportamento funcional de nenhum módulo.
+
+### RF11 — Correção do erro de tipagem em `JwtStrategy` do users-service
+O `users-service` tem um erro de compilação TypeScript pré-existente em sua própria `JwtStrategy` (`secretOrKey` pode ser `string | undefined`, incompatível com o tipo exigido por `passport-jwt`), que impede `nest start`/`nest start --watch` de rodar o serviço. Deve ser corrigido para que o serviço possa ser executado normalmente.
+
 ## Fluxo Esperado
 
 1. Um cliente faz uma requisição a uma rota `/auth/*` ou `/users/*` na porta do gateway (3005).
@@ -86,7 +95,7 @@ flowchart TD
 ## Fora de Escopo
 
 - Qualquer alteração no mecanismo de proxy do gateway (circuit breaker, retry, timeout, fallback) — apenas seu uso para as rotas `/auth/*` e `/users/*`.
-- Qualquer alteração nos guards existentes do gateway (`JwtAuthGuard`, `SessionGuard`) ou na forma como validam o token localmente.
+- Qualquer alteração na arquitetura dos guards existentes do gateway (`JwtAuthGuard`, `SessionGuard`) ou na forma como validam o token localmente — RF09 corrige apenas o wiring quebrado (registro da strategy, `validate()`, secret), sem redesenhar o mecanismo.
 - Gerenciamento de sessão (`SessionGuard`, `validateSessionToken`, `sessionToken`) — o fluxo de sessão do gateway não é alterado nem removido, apenas não faz parte desta integração.
 - Autorização por `role` nas rotas encaminhadas (segue o comportamento já definido nas specs de cada endpoint).
 - Alteração da entidade `User` ou dos fluxos de registro/login no `users-service`.
@@ -104,6 +113,9 @@ flowchart TD
 8. `GET http://localhost:3000/health` (diretamente no users-service) retorna `200 OK` com `{ status: "ok", service: "users-service" }`, sem exigir token.
 9. `GET http://localhost:3000/api` (diretamente no users-service) exibe a documentação Swagger com título "Users Service", versão "1.0", e permite autenticação via Bearer token.
 10. Todo o fluxo dos critérios 1 a 6 é executável via `curl`/Postman apontando apenas para a porta do gateway (3005), sem necessidade de chamar o `users-service` diretamente.
+11. `npm run lint` roda sem erros no `api-gateway` e no `users-service`.
+12. `npm run test` (unitários) roda sem falhas no `api-gateway`, incluindo `auth.guard.spec.ts`, `throttler.guard.spec.ts` e `proxy.service.spec.ts`.
+13. `npm run start:dev` sobe normalmente no `users-service`, sem erro de compilação.
 
 ## Referências
 
