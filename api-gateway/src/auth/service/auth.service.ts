@@ -1,5 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { serviceConfig } from 'src/config/gateway.config';
 import { ProxyService } from 'src/proxy/service/proxy.service';
@@ -48,7 +52,11 @@ export class AuthService {
         '/auth/login',
         loginDto,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new UnauthorizedException('Invalid login credentials');
     }
   }
@@ -61,7 +69,11 @@ export class AuthService {
         '/auth/register',
         registerDto,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new UnauthorizedException('Registration failed');
     }
   }

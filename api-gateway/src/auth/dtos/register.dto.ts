@@ -1,10 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
 
 enum Role {
-  USER = 'user',
-  ADMIN = 'admin',
   SELLER = 'seller',
+  BUYER = 'buyer',
 }
 
 export class RegisterDto {
@@ -31,11 +30,9 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'Role do usuário',
-    example: 'user',
-    enum: ['user', 'admin', 'seller'],
-    required: false,
+    example: 'buyer',
+    enum: ['seller', 'buyer'],
   })
-  @IsOptional()
-  @IsString()
-  role?: Role = Role.USER;
+  @IsEnum(Role, { message: 'role deve ser seller ou buyer' })
+  role: Role;
 }
