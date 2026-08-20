@@ -47,6 +47,12 @@ O `api-gateway` acumula, hoje, um conjunto de problemas de lint pré-existentes 
 ### RF11 — Correção do erro de tipagem em `JwtStrategy` do users-service
 O `users-service` tem um erro de compilação TypeScript pré-existente em sua própria `JwtStrategy` (`secretOrKey` pode ser `string | undefined`, incompatível com o tipo exigido por `passport-jwt`), que impede `nest start`/`nest start --watch` de rodar o serviço. Deve ser corrigido para que o serviço possa ser executado normalmente.
 
+### RF12 — Correção da validação de `/auth/register` e `/auth/login` no gateway
+O `AuthController` do gateway importava `LoginDto`/`RegisterDto` como `import type`, o que remove a classe em tempo de execução. Como o `ValidationPipe` global (`whitelist: true`) depende da classe real (via metadata de reflexão) para saber quais campos são válidos, todo corpo de requisição a `/auth/register` e `/auth/login` era rejeitado com `400 Bad Request` ("property X should not exist") para qualquer campo enviado — quebrando RF05 por completo. Corrigido trocando para import normal (em tempo de execução) desses DTOs.
+
+### RF13 — Correção do glob de entidades do TypeORM no users-service
+O `users-service` define suas entidades em `database.config.ts` com o glob `*.entity{.ts,js}`, que é inválido (falta o `.` antes do grupo `{ts,js}`): expande para `*.entity.ts` ou `*.entityjs`, nunca `*.entity.js`. Isso faz com que, ao rodar a partir do build compilado (`nest start`, `nest start --watch`, `nest start:prod` — o cenário real de uso, fora dos testes que rodam via `ts-jest` direto do `.ts`), nenhuma entidade seja registrada no TypeORM, e qualquer operação de banco (registro, login, consultas) falhe com `500 Internal Server Error` (`EntityMetadataNotFoundError`). Corrigido o glob para `*.entity.{ts,js}`.
+
 ## Fluxo Esperado
 
 1. Um cliente faz uma requisição a uma rota `/auth/*` ou `/users/*` na porta do gateway (3005).
