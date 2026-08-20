@@ -3,7 +3,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggingMiddleware } from './logging/logging.middleware';
 
 @Module({
-   imports: [
+  imports: [
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 minute

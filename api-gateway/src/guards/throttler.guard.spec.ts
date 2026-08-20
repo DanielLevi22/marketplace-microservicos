@@ -1,7 +1,14 @@
-import { ThrottlerGuard } from './throttler.guard';
+import { Reflector } from '@nestjs/core';
+import { CustomThrottlerGuard } from './throttler.guard';
 
-describe('ThrottlerGuard', () => {
+describe('CustomThrottlerGuard', () => {
   it('should be defined', () => {
-    expect(new ThrottlerGuard()).toBeDefined();
+    const guard = new CustomThrottlerGuard(
+      { throttlers: [] },
+      { increment: jest.fn() },
+      new Reflector(),
+    );
+
+    expect(guard).toBeDefined();
   });
 });

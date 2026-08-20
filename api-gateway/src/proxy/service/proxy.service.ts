@@ -8,13 +8,11 @@ import { DefaultFallbackService } from 'src/common/fallback/default.fallback';
 import { TimeoutService } from 'src/common/timeout/timeout.service';
 import { RetryService } from 'src/common/retry/retry.service';
 
-interface UserInfo {
+export interface UserInfo {
   userId: string;
   email: string;
   role: string;
 }
-
-type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 @Injectable()
 export class ProxyService {
@@ -29,14 +27,14 @@ export class ProxyService {
     private readonly retryService: RetryService,
   ) {}
 
-   async proxyRequest(
+  async proxyRequest(
     serviceName: keyof typeof serviceConfig,
     method: string,
     path: string,
     data?: unknown,
     headers?: Record<string, string>,
     userInfo?: UserInfo,
-  ) {
+  ): Promise<unknown> {
     const service = serviceConfig[serviceName];
     const url = `${service.url}${path}`;
 
@@ -58,8 +56,8 @@ export class ProxyService {
                 };
 
                 const response = await firstValueFrom(
-                  this.httpService.request({
-                    method: method.toLowerCase() as HttpMethod,
+                  this.httpService.request<unknown>({
+                    method: method.toLowerCase(),
                     url,
                     data,
                     headers: enhancedHeaders,

@@ -4,16 +4,22 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { AuthService } from '../auth/service/auth.service';
+import type { Request } from 'express';
+import { AuthService } from '../auth/service/auth.service';
+import type { UserSession } from '../auth/service/auth.service';
+
+interface AuthenticatedRequest extends Omit<Request, 'user'> {
+  user?: UserSession['user'];
+}
 
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
-    const sessionToken = request.headers['x-session-token'];
+    const sessionToken = request.header('x-session-token');
 
     if (!sessionToken) {
       throw new UnauthorizedException('Session token required');
@@ -29,7 +35,7 @@ export class SessionGuard implements CanActivate {
       request.user = session.user;
 
       return true;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid session token');
     }
   }

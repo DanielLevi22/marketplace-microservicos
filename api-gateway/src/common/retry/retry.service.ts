@@ -87,7 +87,7 @@ export class RetryService {
     const result = await this.executeWithRetry(operation, { maxRetries });
 
     if (!result.success) {
-      throw result.error;
+      throw result.error ?? new Error('Retry failed with no error captured');
     }
 
     return result.data!;

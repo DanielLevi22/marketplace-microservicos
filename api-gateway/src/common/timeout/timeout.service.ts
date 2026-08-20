@@ -40,7 +40,7 @@ export class TimeoutService {
           this.logger.log(`Operation succeeded on attempt ${attempt + 1}`);
         }
 
-        return result as T;
+        return result;
       } catch (error) {
         lastError = error as Error;
         this.logger.warn(`Attempt ${attempt + 1} failed: ${lastError.message}`);

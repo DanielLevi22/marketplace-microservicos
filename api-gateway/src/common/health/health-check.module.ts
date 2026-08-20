@@ -4,10 +4,7 @@ import { HttpModule } from '@nestjs/axios';
 import { CircuitBreakerModule } from '../circuit-breaker/circuit-breaker.module';
 
 @Module({
-  imports: [
-    HttpModule,
-    CircuitBreakerModule
-  ],
+  imports: [HttpModule, CircuitBreakerModule],
   providers: [HealthCheckService],
   exports: [HealthCheckService],
 })

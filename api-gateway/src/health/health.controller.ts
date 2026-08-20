@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { HealthService } from './health.service';
 import { HealthCheckService } from 'src/common/health/health-check.service';
+import { HealthStatus } from 'src/common/health/health-check.interface';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('health')
@@ -13,7 +14,7 @@ export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Health check do gateway' })
   @ApiResponse({ status: 200, description: 'Gateway está saudável' })
-  async getHealth() {
+  getHealth() {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -29,11 +30,13 @@ export class HealthController {
   async getServicesHealth() {
     const services = await this.healthCheckService.checkAllServices();
 
-    const overallStatus = services.every((s) => s.status === 'healthy')
-      ? 'healthy'
-      : services.some((s) => s.status === 'healthy')
-        ? 'degraded'
-        : 'unhealthy';
+    const overallStatus = services.every(
+      (s) => s.status === HealthStatus.HEALTHY,
+    )
+      ? HealthStatus.HEALTHY
+      : services.some((s) => s.status === HealthStatus.HEALTHY)
+        ? HealthStatus.DEGRADED
+        : HealthStatus.UNHEALTHY;
 
     return {
       overallStatus,
@@ -41,9 +44,12 @@ export class HealthController {
       services,
       summary: {
         total: services.length,
-        healthy: services.filter((s) => s.status === 'healthy').length,
-        unhealthy: services.filter((s) => s.status === 'unhealthy').length,
-        degraded: services.filter((s) => s.status === 'degraded').length,
+        healthy: services.filter((s) => s.status === HealthStatus.HEALTHY)
+          .length,
+        unhealthy: services.filter((s) => s.status === HealthStatus.UNHEALTHY)
+          .length,
+        degraded: services.filter((s) => s.status === HealthStatus.DEGRADED)
+          .length,
       },
     };
   }
@@ -51,7 +57,7 @@ export class HealthController {
   @Get('services/:serviceName')
   @ApiOperation({ summary: 'Health check de um serviço específico' })
   @ApiResponse({ status: 200, description: 'Status do serviço' })
-  async getServiceHealth(@Param('serviceName') serviceName: string) {
+  getServiceHealth(@Param('serviceName') serviceName: string) {
     const cached = this.healthCheckService.getCachedHealth(serviceName);
 
     if (!cached) {
@@ -81,7 +87,7 @@ export class HealthController {
     status: 200,
     description: 'Liveness status retrieved successfully',
   })
-  async getLive() {
+  getLive() {
     return this.healthService.getLiveStatus();
   }
 }

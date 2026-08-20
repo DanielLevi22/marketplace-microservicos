@@ -31,7 +31,7 @@ export class HealthService {
         ...(serviceHealth.error && { error: serviceHealth.error }),
       };
 
-      if (serviceHealth.status === 'unhealthy') {
+      if (serviceHealth.status === HealthStatus.UNHEALTHY) {
         hasUnhealthyServices = true;
       }
     });
@@ -53,7 +53,7 @@ export class HealthService {
     };
   }
 
-  async getLiveStatus() {
+  getLiveStatus() {
     return {
       status: 'alive',
       timestamp: new Date().toISOString(),

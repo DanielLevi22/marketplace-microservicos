@@ -5,25 +5,22 @@ export class CacheFallbackService {
   private readonly logger = new Logger(CacheFallbackService.name);
   private readonly cache = new Map<string, { data: any; timestamp: number }>();
 
-  async getCachedData<T>(
-    key: string,
-    timeout: number = 300000,
-  ): Promise<T | null> {
+  getCachedData<T>(key: string, timeout: number = 300000): Promise<T | null> {
     const cached = this.cache.get(key);
 
     if (!cached) {
-      return null;
+      return Promise.resolve(null);
     }
 
     const isExpired = Date.now() - cached.timestamp > timeout;
 
     if (isExpired) {
       this.cache.delete(key);
-      return null;
+      return Promise.resolve(null);
     }
 
     this.logger.log(`Cache HIT for key: ${key}`);
-    return cached.data;
+    return Promise.resolve(cached.data as T);
   }
 
   setCachedData<T>(key: string, data: T): void {

@@ -40,7 +40,7 @@ export class HealthCheckService {
           timeout: 60000,
           resetTimeout: 30000,
         },
-        async () => {
+        () => {
           throw new Error('Circuit breaker fallback');
         },
       );
@@ -65,21 +65,19 @@ export class HealthCheckService {
         status: HealthStatus.UNHEALTHY,
         responseTime,
         lastCheck: new Date(),
-        error:       error instanceof Error
-        ? error
-        : new Error('Unknown error'),
+        error: error instanceof Error ? error : new Error('Unknown error'),
       };
       this.healthCache.set(serviceName, serviceHealth);
       this.logger.error(
         `Health check failed for ${serviceName}`,
-         error instanceof Error ? error.message : 'Unknown error',
+        error instanceof Error ? error.message : 'Unknown error',
       );
 
       return serviceHealth;
     }
   }
 
-   async checkAllServices(): Promise<ServiceHealth[]> {
+  async checkAllServices(): Promise<ServiceHealth[]> {
     const services: (keyof typeof serviceConfig)[] = [
       'users',
       'products',
@@ -101,7 +99,10 @@ export class HealthCheckService {
           status: HealthStatus.UNHEALTHY,
           responseTime: 0,
           lastCheck: new Date(),
-          error: result.reason?.message || 'Unknown error',
+          error:
+            result.reason instanceof Error
+              ? result.reason
+              : new Error('Unknown error'),
         };
       }
     });
