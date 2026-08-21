@@ -32,10 +32,10 @@ export class Payment {
   @Column({ length: 50 })
   paymentMethod: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   transactionId: string | null;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   rejectionReason: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
