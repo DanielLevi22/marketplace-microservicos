@@ -17,7 +17,9 @@ Isso viola o RF03 e o critério de aceite já definidos em `docs/specs/01-repass
 
 O padrão correto já existe no próprio projeto: `checkout-service/src/cart/products-client.service.ts` usa `ServiceUnavailableException` (503) para o mesmo tipo de falha (sem resposta do serviço downstream).
 
-Além disso, `test/users.e2e-spec.ts`, `test/checkout.e2e-spec.ts` e `test/payments.e2e-spec.ts` (já existentes) sobem o `AppModule` sem mockar `HttpService`, exigindo `users-service`/`checkout-service`/`payments-service` reais rodando (documentado no próprio comentário desses arquivos). Isso contraria o requisito geral desta atividade de nenhum teste depender de serviço externo — corrigido pelo RF06.
+Além disso, `test/users.e2e-spec.ts`, `test/checkout.e2e-spec.ts` e `test/payments.e2e-spec.ts` (já existentes) sobem o `AppModule` sem mockar `HttpService`, exigindo serviços reais rodando (documentado no próprio comentário desses arquivos). São casos diferentes:
+- `users.e2e-spec.ts` só exercita chamadas simples de proxy (`/auth/register`, `/auth/login`, `/users/profile`, `/users/sellers`) — dá para mockar sem perda de valor do teste (RF06).
+- `checkout.e2e-spec.ts` e `payments.e2e-spec.ts` são fluxos completos de compra (registro → produto → carrinho → checkout → liquidação assíncrona do pagamento via RabbitMQ) que pertencem a `docs/specs/02-integracao-checkout-service.md` e `docs/specs/01-integracao-payments-gateway-e2e-completo.md`, com o propósito deliberado de validar a integração real entre os 4 serviços. Mockar esses dois exigiria reimplementar a lógica de negócio de carrinho/pedido/pagamento como um fake, esvaziando o propósito do teste — por isso continuam exigindo os serviços reais, fora do escopo desta spec (ver "Fora de Escopo").
 
 ## Objetivo
 
@@ -43,8 +45,8 @@ Criar `src/common/timeout/timeout.service.spec.ts`.
 ### RF05 — Teste unitário dos fallbacks
 Criar `src/common/fallback/cache.fallback.spec.ts` e `src/common/fallback/default.fallback.spec.ts`.
 
-### RF06 — Mockar `HttpService` nos e2e pré-existentes que hoje exigem serviços reais
-Atualizar `test/users.e2e-spec.ts`, `test/checkout.e2e-spec.ts` e `test/payments.e2e-spec.ts` para sobrepor `HttpService` (mesmo padrão do RF02), removendo a dependência de `users-service`/`checkout-service`/`payments-service` reais rodando, sem mudar os cenários/asserções de negócio já cobertos por esses arquivos — só a fonte da resposta HTTP passa a ser mockada.
+### RF06 — Mockar `HttpService` em `test/users.e2e-spec.ts`
+Atualizar `test/users.e2e-spec.ts` para sobrepor `HttpService` (mesmo padrão do RF02), removendo a dependência de `users-service` real rodando, sem mudar os cenários/asserções já cobertos — só a fonte da resposta HTTP passa a ser mockada. `checkout.e2e-spec.ts` e `payments.e2e-spec.ts` **não** são tocados (ver Contexto e Fora de Escopo).
 
 ## Regras de Negócio
 
@@ -77,14 +79,15 @@ flowchart TD
 - Com `users-service` mockado como indisponível, `POST /auth/login` e `POST /auth/register` respondem `503`, não `401`.
 - Com `users-service` mockado respondendo `401`/`400`/`409` reais, o gateway continua repassando o status e a mensagem originais (sem regressão do que já foi corrigido em `01-repasse-erros-autenticacao.md`).
 - `payments-proxy.controller.spec.ts`, `timeout.service.spec.ts`, `cache.fallback.spec.ts` e `default.fallback.spec.ts` existem e cobrem os cenários básicos de cada componente.
-- `npm run test:e2e` passa com os 4 serviços downstream reais parados (`users.e2e-spec.ts`, `checkout.e2e-spec.ts` e `payments.e2e-spec.ts` incluídos).
+- `npm run test:e2e` passa com os 4 serviços downstream reais parados, exceto `checkout.e2e-spec.ts` e `payments.e2e-spec.ts` (ver Fora de Escopo) — `auth.e2e-spec.ts`, `users.e2e-spec.ts`, `app.e2e-spec.ts`, `metrics.e2e-spec.ts` e `health.e2e-spec.ts` passam sem nenhum serviço real.
 
 ## Fora de Escopo
 
 - Qualquer alteração em `ProxyService`, `CircuitBreakerService`, `RetryService` ou `DefaultFallbackService` além do necessário para os testes (RF01 é só nos dois `catch` de `AuthService`).
 - Novas regras de autenticação (refresh token, recuperação de senha, etc.).
 - Testes de carga/performance.
-- Novos testes e2e cross-service — RF06 só troca a fonte da resposta HTTP dos e2e já existentes por um mock, não adiciona cenários novos de negócio.
+- Novos testes e2e cross-service — RF06 só troca a fonte da resposta HTTP de `users.e2e-spec.ts` por um mock, não adiciona cenários novos de negócio.
+- `test/checkout.e2e-spec.ts` e `test/payments.e2e-spec.ts` — continuam exigindo `users-service`, `products-service`, `checkout-service` (e, no caso de payments, também `payments-service` e RabbitMQ) reais rodando; pertencem a `docs/specs/02-integracao-checkout-service.md`/`01-integracao-payments-gateway-e2e-completo.md`, não a esta atividade.
 
 ## Referências
 
