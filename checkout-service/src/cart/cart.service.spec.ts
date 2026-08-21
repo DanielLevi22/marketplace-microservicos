@@ -205,4 +205,45 @@ describe('CartService', () => {
       });
     });
   });
+
+  describe('getCart', () => {
+    it('returns an empty cart shape without creating a row when there is no active cart', async () => {
+      cartRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.getCart(userId);
+
+      expect(result).toEqual({
+        userId,
+        status: 'active',
+        items: [],
+        total: 0,
+      });
+      expect(cartRepository.create).not.toHaveBeenCalled();
+      expect(cartRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('returns the items and total of an existing active cart', async () => {
+      cartRepository.findOne.mockResolvedValue({ id: 'cart-1', userId });
+      cartRepository.findOneOrFail.mockResolvedValue({
+        id: 'cart-1',
+        userId,
+        status: 'active',
+        items: [
+          {
+            id: 'a',
+            productId: 'p1',
+            productName: 'A',
+            price: 10,
+            quantity: 2,
+            subtotal: 20,
+          },
+        ],
+      });
+
+      const result = await service.getCart(userId);
+
+      expect(result.total).toBe(20);
+      expect(result.items).toHaveLength(1);
+    });
+  });
 });

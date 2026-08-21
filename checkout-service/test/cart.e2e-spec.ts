@@ -225,4 +225,78 @@ describe('Cart (e2e)', () => {
       await cleanupCart(userId);
     });
   });
+
+  describe('GET /cart', () => {
+    it('returns 401 without a token', async () => {
+      await request(app.getHttpServer()).get('/cart').expect(401);
+    });
+
+    it('returns an empty cart without creating a row when the user has no active cart', async () => {
+      const userId = randomUUID();
+
+      const response = await request(app.getHttpServer())
+        .get('/cart')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      const body = response.body as CartResponse;
+      expect(body).toEqual({
+        userId,
+        status: 'active',
+        items: [],
+        total: 0,
+      });
+
+      const cartRow = await cartRepository.findOne({ where: { userId } });
+      expect(cartRow).toBeNull();
+    });
+
+    it('returns the items and total of the user active cart', async () => {
+      const userId = randomUUID();
+      const product = mockProduct({ price: 15 });
+      productsClientService.findById.mockResolvedValue(product);
+
+      await request(app.getHttpServer())
+        .post('/cart/items')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ productId: product.id, quantity: 2 })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/cart')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      const body = response.body as CartResponse;
+      expect(body.items).toHaveLength(1);
+      expect(body.total).toBe(30);
+
+      await cleanupCart(userId);
+    });
+
+    it('never returns another user cart', async () => {
+      const userA = randomUUID();
+      const userB = randomUUID();
+      const product = mockProduct({ price: 15 });
+      productsClientService.findById.mockResolvedValue(product);
+
+      await request(app.getHttpServer())
+        .post('/cart/items')
+        .set('Authorization', `Bearer ${tokenFor(userA)}`)
+        .send({ productId: product.id, quantity: 1 })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/cart')
+        .set('Authorization', `Bearer ${tokenFor(userB)}`)
+        .expect(200);
+
+      const body = response.body as CartResponse;
+      expect(body.items).toHaveLength(0);
+      expect(body.total).toBe(0);
+
+      await cleanupCart(userA);
+      await cleanupCart(userB);
+    });
+  });
 });

@@ -82,6 +82,16 @@ export class CartService {
     return this.rebuildCartResponse(cart.id);
   }
 
+  async getCart(userId: string): Promise<CartResponse> {
+    const cart = await this.findActiveCartEntity(userId);
+
+    if (!cart) {
+      return { userId, status: 'active', items: [], total: 0 };
+    }
+
+    return this.rebuildCartResponse(cart.id);
+  }
+
   private async findActiveCartEntity(userId: string): Promise<Cart | null> {
     return this.cartRepository.findOne({
       where: { userId, status: 'active' },
