@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PaymentQueueService } from '../payment-queue/payment-queue.service';
 import { PaymentOrderMessage } from '../payment-queue.interface';
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
+import { PaymentsService } from '../../payments/payments.service';
 
 export interface ConsumerMetrics {
   totalProcessed: number; // Total de mensagens processadas
@@ -44,6 +45,7 @@ export class PaymentConsumerService implements OnModuleInit {
   constructor(
     private readonly paymentQueueService: PaymentQueueService,
     private readonly rabbitMQService: RabbitmqService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async onModuleInit() {
@@ -78,7 +80,9 @@ export class PaymentConsumerService implements OnModuleInit {
     }
   }
 
-  private processPaymentOrder(message: PaymentOrderMessage): void {
+  private async processPaymentOrder(
+    message: PaymentOrderMessage,
+  ): Promise<void> {
     const startTime = Date.now();
     try {
       // Log inicial com informações da mensagem
@@ -96,9 +100,9 @@ export class PaymentConsumerService implements OnModuleInit {
         throw new Error('Invalid payment message received');
       }
 
-      // TODO: Processar pagamento usando PaymentsService
-      // Isso será implementado na próxima aula
-      this.logger.log('✅ Payment order received and validated');
+      await this.paymentsService.processPayment(message);
+
+      this.logger.log('✅ Payment order processed');
       this.updateMetrics(true, startTime);
     } catch (error) {
       this.updateMetrics(false, startTime);
