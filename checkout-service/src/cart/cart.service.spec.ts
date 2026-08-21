@@ -304,4 +304,36 @@ describe('CartService', () => {
       expect(result.total).toBe(20);
     });
   });
+
+  describe('findActiveCartEntity', () => {
+    it('returns the active cart of the user', async () => {
+      const activeCart = { id: 'cart-1', userId, status: 'active' };
+      cartRepository.findOne.mockResolvedValue(activeCart);
+
+      const result = await service.findActiveCartEntity(userId);
+
+      expect(cartRepository.findOne).toHaveBeenCalledWith({
+        where: { userId, status: 'active' },
+      });
+      expect(result).toBe(activeCart);
+    });
+
+    it('returns null when the user has no active cart', async () => {
+      cartRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.findActiveCartEntity(userId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('completeCart', () => {
+    it('updates the cart status to completed', async () => {
+      await service.completeCart('cart-1');
+
+      expect(cartRepository.update).toHaveBeenCalledWith('cart-1', {
+        status: 'completed',
+      });
+    });
+  });
 });
