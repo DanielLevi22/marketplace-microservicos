@@ -5,9 +5,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Repository } from 'typeorm';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { Product } from '../src/products/entities/product.entity';
+import { typeormTestConfig } from './utils/typeorm-test.config';
 
 const JWT_SECRET = 'e2e-test-secret';
 
@@ -22,7 +23,17 @@ describe('Products (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
+      .compile();
 
     process.env.JWT_SECRET = originalSecret;
 
