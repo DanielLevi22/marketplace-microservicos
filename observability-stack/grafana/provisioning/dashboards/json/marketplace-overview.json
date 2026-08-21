@@ -143,6 +143,21 @@
         "graphMode": "area",
         "textMode": "value"
       }
+    },
+    {
+      "id": 8,
+      "title": "Alertas Ativos",
+      "type": "table",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "instant": true,
+          "format": "table"
+        }
+      ]
     }
   ]
 }
