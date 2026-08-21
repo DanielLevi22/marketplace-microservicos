@@ -8,6 +8,7 @@ import { databaseConfig } from './config/database.config';
 import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
 import { AuthModule } from './auth/auth.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from './auth/auth.module';
     CartModule,
     OrdersModule,
     AuthModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
