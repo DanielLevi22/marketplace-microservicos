@@ -7,6 +7,7 @@ import { databaseConfig } from './config/database.config';
 import { ProductsModule } from './products/products.module';
 import { AuthModule } from './auth/auth.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MetricsModule } from './metrics/metrics.module';
     ProductsModule,
     AuthModule,
     MetricsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -6,6 +6,7 @@ import { databaseConfig } from './config/database.config';
 import { EventsModule } from './events/events.module';
 import { PaymentsModule } from './payments/payments.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { MetricsModule } from './metrics/metrics.module';
     EventsModule,
     PaymentsModule,
     MetricsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
