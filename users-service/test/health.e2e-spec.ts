@@ -22,10 +22,15 @@ describe('HealthController (e2e)', () => {
     await app.close();
   });
 
-  it('/health (GET) returns 200 with the service status, without an Authorization header', () => {
+  it('/health (GET) returns 200 with the database indicator up, without an Authorization header', () => {
     return request(app.getHttpServer())
       .get('/health')
       .expect(200)
-      .expect({ status: 'ok', service: 'users-service' });
+      .expect({
+        status: 'ok',
+        info: { database: { status: 'up' } },
+        error: {},
+        details: { database: { status: 'up' } },
+      });
   });
 });
