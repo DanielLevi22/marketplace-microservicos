@@ -29,6 +29,23 @@ describe('MetricsService', () => {
     expect(metrics).toMatch(/process_|nodejs_/);
   });
 
+  it('exposes orders_created_total after a checkout', async () => {
+    service.incrementOrdersCreated();
+
+    const { metrics } = await service.getMetrics();
+
+    expect(metrics).toContain('orders_created_total 1');
+  });
+
+  it('exposes rabbitmq_messages_published_total with a queue label after a publish', async () => {
+    service.incrementRabbitMessagesPublished('payment.order');
+
+    const { metrics } = await service.getMetrics();
+
+    expect(metrics).toContain('rabbitmq_messages_published_total');
+    expect(metrics).toContain('queue="payment.order"');
+  });
+
   it('does not collide across multiple instances (isolated registry per instance)', async () => {
     const other = new MetricsService();
 

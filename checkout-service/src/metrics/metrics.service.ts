@@ -21,6 +21,8 @@ export class MetricsService {
   private readonly httpRequestDurationSeconds: Histogram<
     'method' | 'route' | 'status_code'
   >;
+  private readonly ordersCreatedTotal: Counter;
+  private readonly rabbitmqMessagesPublishedTotal: Counter<'queue'>;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
@@ -38,6 +40,19 @@ export class MetricsService {
       labelNames: ['method', 'route', 'status_code'],
       registers: [this.registry],
     });
+
+    this.ordersCreatedTotal = new Counter({
+      name: 'orders_created_total',
+      help: 'Total de pedidos criados',
+      registers: [this.registry],
+    });
+
+    this.rabbitmqMessagesPublishedTotal = new Counter({
+      name: 'rabbitmq_messages_published_total',
+      help: 'Total de mensagens publicadas no RabbitMQ',
+      labelNames: ['queue'],
+      registers: [this.registry],
+    });
   }
 
   recordHttpRequest(labels: HttpRequestLabels, durationSeconds: number): void {
@@ -49,6 +64,14 @@ export class MetricsService {
 
     this.httpRequestsTotal.inc(promLabels);
     this.httpRequestDurationSeconds.observe(promLabels, durationSeconds);
+  }
+
+  incrementOrdersCreated(): void {
+    this.ordersCreatedTotal.inc();
+  }
+
+  incrementRabbitMessagesPublished(queue: string): void {
+    this.rabbitmqMessagesPublishedTotal.inc({ queue });
   }
 
   async getMetrics(): Promise<{ contentType: string; metrics: string }> {

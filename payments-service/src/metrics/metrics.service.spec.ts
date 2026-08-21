@@ -29,6 +29,26 @@ describe('MetricsService', () => {
     expect(metrics).toMatch(/process_|nodejs_/);
   });
 
+  it('exposes payments_processed_total and payments_approved_total after an approved payment', async () => {
+    service.incrementPaymentsProcessed();
+    service.incrementPaymentsApproved();
+
+    const { metrics } = await service.getMetrics();
+
+    expect(metrics).toContain('payments_processed_total 1');
+    expect(metrics).toContain('payments_approved_total 1');
+  });
+
+  it('exposes payments_rejected_total with a reason label after a rejected payment', async () => {
+    service.incrementPaymentsProcessed();
+    service.incrementPaymentsRejected('Limite excedido');
+
+    const { metrics } = await service.getMetrics();
+
+    expect(metrics).toContain('payments_rejected_total');
+    expect(metrics).toContain('reason="Limite excedido"');
+  });
+
   it('does not collide across multiple instances (isolated registry per instance)', async () => {
     const other = new MetricsService();
 

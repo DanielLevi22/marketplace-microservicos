@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { FakePaymentGatewayService } from './fake-payment-gateway.service';
 import { PaymentOrderMessage } from '../events/payment-queue.interface';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface PaymentResponse {
   id: string;
@@ -25,6 +26,7 @@ export class PaymentsService {
     @InjectRepository(Payment)
     private readonly paymentsRepository: Repository<Payment>,
     private readonly fakePaymentGatewayService: FakePaymentGatewayService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async processPayment(message: PaymentOrderMessage): Promise<void> {
@@ -56,6 +58,15 @@ export class PaymentsService {
     payment.processedAt = new Date();
 
     await this.paymentsRepository.save(payment);
+
+    if (result.approved) {
+      this.metricsService.incrementPaymentsApproved();
+    } else {
+      this.metricsService.incrementPaymentsRejected(
+        result.rejectionReason ?? 'unknown',
+      );
+    }
+    this.metricsService.incrementPaymentsProcessed();
   }
 
   async findByOrderId(orderId: string): Promise<PaymentResponse> {

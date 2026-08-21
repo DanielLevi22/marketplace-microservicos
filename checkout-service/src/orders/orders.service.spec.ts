@@ -5,6 +5,7 @@ import { Order } from './entities/order.entity';
 import { CartService } from '../cart/cart.service';
 import { PaymentQueueService } from '../events/payment-queue/payment-queue.service';
 import { Cart } from '../cart/entities/cart.entity';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('OrdersService', () => {
   let ordersRepository: {
@@ -18,6 +19,7 @@ describe('OrdersService', () => {
     completeCart: jest.Mock;
   };
   let paymentQueueService: { publishPaymentOrder: jest.Mock };
+  let metricsService: { incrementOrdersCreated: jest.Mock };
   let service: OrdersService;
 
   const userId = 'user-1';
@@ -58,11 +60,13 @@ describe('OrdersService', () => {
       completeCart: jest.fn(),
     };
     paymentQueueService = { publishPaymentOrder: jest.fn() };
+    metricsService = { incrementOrdersCreated: jest.fn() };
 
     service = new OrdersService(
       ordersRepository as unknown as Repository<Order>,
       cartService as unknown as CartService,
       paymentQueueService as unknown as PaymentQueueService,
+      metricsService as unknown as MetricsService,
     );
   });
 
@@ -76,6 +80,7 @@ describe('OrdersService', () => {
       expect(ordersRepository.save).not.toHaveBeenCalled();
       expect(cartService.completeCart).not.toHaveBeenCalled();
       expect(paymentQueueService.publishPaymentOrder).not.toHaveBeenCalled();
+      expect(metricsService.incrementOrdersCreated).not.toHaveBeenCalled();
     });
 
     it('rejects when the active cart has no items', async () => {
@@ -88,6 +93,7 @@ describe('OrdersService', () => {
         service.checkout(userId, { paymentMethod: 'pix' }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(ordersRepository.save).not.toHaveBeenCalled();
+      expect(metricsService.incrementOrdersCreated).not.toHaveBeenCalled();
     });
 
     it('creates a pending order, completes the cart and publishes the payment message', async () => {
@@ -122,6 +128,7 @@ describe('OrdersService', () => {
         status: 'pending',
         paymentMethod: 'credit_card',
       });
+      expect(metricsService.incrementOrdersCreated).toHaveBeenCalledTimes(1);
     });
 
     it('propagates a failure from publishPaymentOrder instead of swallowing it', async () => {
@@ -133,6 +140,7 @@ describe('OrdersService', () => {
       await expect(
         service.checkout(userId, { paymentMethod: 'pix' }),
       ).rejects.toThrow('RabbitMQ unavailable');
+      expect(metricsService.incrementOrdersCreated).toHaveBeenCalledTimes(1);
     });
   });
 

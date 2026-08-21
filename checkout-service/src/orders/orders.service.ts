@@ -9,6 +9,7 @@ import { Order, OrderStatus } from './entities/order.entity';
 import { CartService } from '../cart/cart.service';
 import { PaymentQueueService } from '../events/payment-queue/payment-queue.service';
 import { CheckoutDto, PaymentMethod } from './dto/checkout.dto';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface OrderResponse {
   id: string;
@@ -28,6 +29,7 @@ export class OrdersService {
     private readonly ordersRepository: Repository<Order>,
     private readonly cartService: CartService,
     private readonly paymentQueueService: PaymentQueueService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async checkout(userId: string, dto: CheckoutDto): Promise<OrderResponse> {
@@ -50,6 +52,8 @@ export class OrdersService {
         status: 'pending',
       }),
     );
+
+    this.metricsService.incrementOrdersCreated();
 
     await this.cartService.completeCart(cart.id);
 

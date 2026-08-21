@@ -21,6 +21,9 @@ export class MetricsService {
   private readonly httpRequestDurationSeconds: Histogram<
     'method' | 'route' | 'status_code'
   >;
+  private readonly paymentsProcessedTotal: Counter;
+  private readonly paymentsApprovedTotal: Counter;
+  private readonly paymentsRejectedTotal: Counter<'reason'>;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
@@ -38,6 +41,25 @@ export class MetricsService {
       labelNames: ['method', 'route', 'status_code'],
       registers: [this.registry],
     });
+
+    this.paymentsProcessedTotal = new Counter({
+      name: 'payments_processed_total',
+      help: 'Total de pagamentos processados (aprovados ou rejeitados)',
+      registers: [this.registry],
+    });
+
+    this.paymentsApprovedTotal = new Counter({
+      name: 'payments_approved_total',
+      help: 'Total de pagamentos aprovados',
+      registers: [this.registry],
+    });
+
+    this.paymentsRejectedTotal = new Counter({
+      name: 'payments_rejected_total',
+      help: 'Total de pagamentos rejeitados',
+      labelNames: ['reason'],
+      registers: [this.registry],
+    });
   }
 
   recordHttpRequest(labels: HttpRequestLabels, durationSeconds: number): void {
@@ -49,6 +71,18 @@ export class MetricsService {
 
     this.httpRequestsTotal.inc(promLabels);
     this.httpRequestDurationSeconds.observe(promLabels, durationSeconds);
+  }
+
+  incrementPaymentsProcessed(): void {
+    this.paymentsProcessedTotal.inc();
+  }
+
+  incrementPaymentsApproved(): void {
+    this.paymentsApprovedTotal.inc();
+  }
+
+  incrementPaymentsRejected(reason: string): void {
+    this.paymentsRejectedTotal.inc({ reason });
   }
 
   async getMetrics(): Promise<{ contentType: string; metrics: string }> {

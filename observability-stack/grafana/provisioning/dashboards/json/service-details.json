@@ -1,0 +1,155 @@
+{
+  "uid": "service-details",
+  "title": "Service Details",
+  "tags": ["marketplace"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(up, job)",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Rate (req/s) por rota",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{job=~\"$service\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "Errors (%) por rota",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route) (rate(http_requests_total{job=~\"$service\", status_code=~\"4..|5..\"}[5m])) / sum by (route) (rate(http_requests_total{job=~\"$service\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Duration P50/P95/P99",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))",
+          "legendFormat": "p50 {{route}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))",
+          "legendFormat": "p95 {{route}}"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))",
+          "legendFormat": "p99 {{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "title": "Top rotas por volume",
+      "type": "table",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (route) (rate(http_requests_total{job=~\"$service\"}[5m])))",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Distribuicao de status codes",
+      "type": "piechart",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status_code) (increase(http_requests_total{job=~\"$service\"}[1h]))",
+          "legendFormat": "{{status_code}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "CPU do processo",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 24, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(process_cpu_seconds_total{job=~\"$service\"}[5m])",
+          "legendFormat": "cpu"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Memoria do processo",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 8, "y": 24, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=~\"$service\"}",
+          "legendFormat": "memoria"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "title": "Event loop lag",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 16, "y": 24, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "nodejs_eventloop_lag_seconds{job=~\"$service\"}",
+          "legendFormat": "event loop lag"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    }
+  ]
+}
