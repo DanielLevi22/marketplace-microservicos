@@ -8,7 +8,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { databaseConfig } from '../src/config/database.config';
@@ -20,6 +20,7 @@ import {
 } from '../src/cart/products-client.service';
 import { Cart } from '../src/cart/entities/cart.entity';
 import { CartResponse } from '../src/cart/cart.service';
+import { typeormTestConfig } from './utils/typeorm-test.config';
 
 describe('Cart (e2e)', () => {
   let app: INestApplication<App>;
@@ -42,6 +43,15 @@ describe('Cart (e2e)', () => {
         }),
       ],
     })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
       .overrideProvider(ProductsClientService)
       .useValue(productsClientService)
       .compile();
