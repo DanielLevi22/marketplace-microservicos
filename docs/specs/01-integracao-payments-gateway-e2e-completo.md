@@ -38,11 +38,17 @@ O encaminhamento da rota definida em RF02 deve ser feito através do `ProxyServi
 
 ### RF06 — Correção do glob de entidades do `payments-service`
 
-Ao validar o fluxo e2e (RF07) contra o `payments-service` real, foi constatado que o serviço nunca persiste nenhum `Payment`: `payments-service/src/config/database.config.ts` define `entities: [__dirname + '/../**/*.entity{.ts,js}']`, cujo padrão expande para `*.entity.ts` OU `*.entityjs` (sem o `.` antes de `js`). Rodando a partir do `dist/` compilado (`nest start`/`start:dev`), só existem arquivos `.entity.js`, que não casam com `entityjs` — a entidade `Payment` nunca é registrada na `DataSource`, e todo processamento de pagamento falha com `EntityMetadataNotFoundError`, entrando em retry/DLQ indefinidamente.
+Ao validar o fluxo e2e (RF08) contra o `payments-service` real, foi constatado que o serviço nunca persiste nenhum `Payment`: `payments-service/src/config/database.config.ts` define `entities: [__dirname + '/../**/*.entity{.ts,js}']`, cujo padrão expande para `*.entity.ts` OU `*.entityjs` (sem o `.` antes de `js`). Rodando a partir do `dist/` compilado (`nest start`/`start:dev`), só existem arquivos `.entity.js`, que não casam com `entityjs` — a entidade `Payment` nunca é registrada na `DataSource`, e todo processamento de pagamento falha com `EntityMetadataNotFoundError`, entrando em retry/DLQ indefinidamente.
 
 Esse é o mesmo bug de glob já identificado e corrigido no `users-service` e no `checkout-service` (`fix(checkout-service): corrige glob de entidades do TypeORM`). Corrige-se aqui o mesmo padrão, trocando para `*.entity.{ts,js}`, sem nenhuma outra alteração no `payments-service` — a exceção pontual à regra de "nenhuma alteração no payments-service" desta spec, necessária para o RF07 ser executável.
 
-### RF07 — Teste e2e do fluxo de compra completo via gateway
+### RF07 — Correção do conflito de porta entre `checkout-db` e `products-db`
+
+Ainda validando o fluxo e2e (RF08), foi constatado que `checkout-service/docker-compose.yaml` mapeia `checkout-db` para a porta de host `5434`, a mesma porta já usada por `products-db` (`products-service/docker-compose.yaml`, `products-service/docs/specs/01-scaffold.md`) — os dois containers nunca conseguem subir ao mesmo tempo. A própria documentação do `checkout-service` (`checkout-service/docs/specs/02-entidades-e-jwt.md`, `03-gerenciamento-carrinho.md`) já registra a porta correta como `5436`; o `docker-compose.yaml` e o valor padrão em `checkout-service/src/config/database.config.ts` é que estavam divergentes.
+
+Corrige-se `checkout-service/docker-compose.yaml` (porta de host de `checkout-db` para `5436:5432`) e o valor padrão de `DB_PORT` em `checkout-service/src/config/database.config.ts` (de `5434` para `5436`), para ficarem consistentes com a porta já documentada nas specs do próprio `checkout-service` — sem nenhuma outra alteração no serviço.
+
+### RF08 — Teste e2e do fluxo de compra completo via gateway
 
 Deve existir, no `api-gateway`, um teste e2e que executa o fluxo de compra completo do marketplace, do início ao fim, chamando exclusivamente a porta do gateway (3005), cobrindo os dois desfechos possíveis de pagamento:
 
@@ -66,7 +72,7 @@ Deve existir, no `api-gateway`, um teste e2e que executa o fluxo de compra compl
 ## Fora de Escopo
 
 - Qualquer alteração no `payments-service` (controllers, services, entidade, regras do gateway simulado) além do já definido em `payments-service/docs/specs/01-processamento-pagamento.md`, com a única exceção da correção pontual de RF06 (glob de entidades do TypeORM).
-- Qualquer alteração no `checkout-service` além do já existente — nenhuma limpeza é necessária, o `AppController` já expõe apenas `GET /` e `GET /health`.
+- Qualquer alteração no `checkout-service` além do já existente — nenhuma limpeza é necessária, o `AppController` já expõe apenas `GET /` e `GET /health` — com a única exceção da correção pontual de RF07 (porta de `checkout-db`).
 - Webhook ou qualquer notificação de volta ao `checkout-service` sobre o resultado do pagamento, e qualquer atualização do `status` do `Order` a partir desse resultado.
 - Verificação de que o solicitante de `GET /payments/:orderId` é o dono do pedido consultado, tanto no `payments-service` quanto no `api-gateway`.
 - Qualquer alteração no mecanismo de proxy do gateway (circuit breaker, retry, timeout, fallback) — apenas seu uso para a rota `/payments/:orderId`.
@@ -149,8 +155,10 @@ flowchart TD
 6. Nesse teste e2e, o fluxo com o produto de preço normal resulta em um pagamento com `status: approved`.
 7. Nesse teste e2e, o fluxo com o produto de preço terminado em `.99` resulta em um pagamento com `status: rejected` e `rejectionReason: "Cartão recusado pela operadora"`.
 8. Em nenhum momento do teste e2e é feita uma chamada direta a `users-service` (3000), `products-service` (3001), `checkout-service` (3003) ou `payments-service` (3004) — todas as chamadas passam pelo gateway (3005).
-9. Nenhuma alteração é feita no `payments-service` além da correção pontual do glob de entidades (RF06), nem no `checkout-service`.
+9. Nenhuma alteração é feita no `payments-service` além da correção pontual do glob de entidades (RF06), nem no `checkout-service` além da correção pontual de porta (RF07).
 10. `payments-service/src/config/database.config.ts` usa o padrão `*.entity.{ts,js}` para o `entities` do TypeORM, e a entidade `Payment` é corretamente registrada na `DataSource` ao rodar o serviço a partir do `dist/` (`nest start`/`start:dev`), sem `EntityMetadataNotFoundError`.
+11. `checkout-db` (porta de host `5436`) e `products-db` (porta de host `5434`) sobem simultaneamente via `docker compose up -d` em cada serviço, sem conflito de porta.
+12. Rodando `npm run test:e2e` em `users-service`, `products-service`, `checkout-service`, `payments-service` e `api-gateway` (com todos os serviços, RabbitMQ e os quatro bancos no ar), todas as suítes e2e de todos os cinco projetos passam.
 
 ## Referências
 
@@ -162,3 +170,4 @@ flowchart TD
 - `api-gateway/src/proxy/service/proxy.service.ts` — infraestrutura de proxy existente.
 - `products-service/docs/specs/04-catalogo-e-integracao-gateway.md`, `users-service/docs/specs/06-integracao-api-gateway.md` — integrações já validadas dos demais serviços com o gateway.
 - Commit `fix(checkout-service): corrige glob de entidades do TypeORM` — precedente do mesmo bug e da mesma correção, aplicado aqui ao `payments-service` (RF06).
+- `products-service/docs/specs/01-scaffold.md`, `checkout-service/docs/specs/02-entidades-e-jwt.md` e `03-gerenciamento-carrinho.md` — documentam as portas de host corretas (`5434` para `products-db`, `5436` para `checkout-db`) usadas para corrigir o conflito de RF07.
