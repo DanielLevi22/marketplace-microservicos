@@ -7,6 +7,7 @@ import { databaseConfig } from './config/database.config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HealthModule } from './health/health.module';
     UsersModule,
     AuthModule,
     HealthModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
