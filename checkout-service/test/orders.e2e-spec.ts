@@ -239,4 +239,73 @@ describe('Orders (e2e)', () => {
       await cleanupUser(userId);
     });
   });
+
+  describe('GET /orders', () => {
+    it('returns 401 without a token', async () => {
+      await request(app.getHttpServer()).get('/orders').expect(401);
+    });
+
+    it('returns an empty list when the user has no orders', async () => {
+      const userId = randomUUID();
+
+      const response = await request(app.getHttpServer())
+        .get('/orders')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it('returns only the user orders, ordered from most recent to oldest', async () => {
+      const userId = randomUUID();
+
+      await addItemToCart(userId, mockProduct({ price: 10 }));
+      const first = await request(app.getHttpServer())
+        .post('/cart/checkout')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ paymentMethod: 'pix' })
+        .expect(201);
+
+      await addItemToCart(userId, mockProduct({ price: 20 }));
+      const second = await request(app.getHttpServer())
+        .post('/cart/checkout')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ paymentMethod: 'boleto' })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/orders')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      const body = response.body as OrderResponse[];
+      expect(body).toHaveLength(2);
+      expect(body[0].id).toBe((second.body as OrderResponse).id);
+      expect(body[1].id).toBe((first.body as OrderResponse).id);
+
+      await cleanupUser(userId);
+    });
+
+    it("never returns another user's orders", async () => {
+      const userA = randomUUID();
+      const userB = randomUUID();
+
+      await addItemToCart(userA, mockProduct({ price: 10 }));
+      await request(app.getHttpServer())
+        .post('/cart/checkout')
+        .set('Authorization', `Bearer ${tokenFor(userA)}`)
+        .send({ paymentMethod: 'pix' })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .get('/orders')
+        .set('Authorization', `Bearer ${tokenFor(userB)}`)
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+
+      await cleanupUser(userA);
+      await cleanupUser(userB);
+    });
+  });
 });
