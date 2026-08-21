@@ -16,6 +16,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProductsModule } from './products/products.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { PaymentsModule } from './payments/payments.module';
 import { HealthModule } from './health/health.module';
 import { HealthCheckModule } from './common/health/health-check.module';
 import { FallbackModule } from './common/fallback/fallback.module';
@@ -55,6 +56,7 @@ import { RetryModule } from './common/retry/retry.module';
     UsersModule,
     ProductsModule,
     CheckoutModule,
+    PaymentsModule,
     HealthModule,
     HealthCheckModule,
     FallbackModule,
