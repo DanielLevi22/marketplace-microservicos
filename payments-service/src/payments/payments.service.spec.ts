@@ -4,6 +4,7 @@ import { PaymentsService } from './payments.service';
 import { Payment } from './entities/payment.entity';
 import { FakePaymentGatewayService } from './fake-payment-gateway.service';
 import { PaymentOrderMessage } from '../events/payment-queue.interface';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('PaymentsService', () => {
   let paymentsRepository: {
@@ -12,6 +13,11 @@ describe('PaymentsService', () => {
     findOne: jest.Mock;
   };
   let fakePaymentGatewayService: { process: jest.Mock };
+  let metricsService: {
+    incrementPaymentsProcessed: jest.Mock;
+    incrementPaymentsApproved: jest.Mock;
+    incrementPaymentsRejected: jest.Mock;
+  };
   let service: PaymentsService;
 
   const message: PaymentOrderMessage = {
@@ -37,10 +43,16 @@ describe('PaymentsService', () => {
       findOne: jest.fn(),
     };
     fakePaymentGatewayService = { process: jest.fn() };
+    metricsService = {
+      incrementPaymentsProcessed: jest.fn(),
+      incrementPaymentsApproved: jest.fn(),
+      incrementPaymentsRejected: jest.fn(),
+    };
 
     service = new PaymentsService(
       paymentsRepository as unknown as Repository<Payment>,
       fakePaymentGatewayService as unknown as FakePaymentGatewayService,
+      metricsService as unknown as MetricsService,
     );
   });
 
@@ -73,6 +85,13 @@ describe('PaymentsService', () => {
           rejectionReason: null,
         }),
       );
+      expect(metricsService.incrementPaymentsApproved).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(metricsService.incrementPaymentsRejected).not.toHaveBeenCalled();
+      expect(metricsService.incrementPaymentsProcessed).toHaveBeenCalledTimes(
+        1,
+      );
     });
 
     it('creates a pending payment and updates it to rejected', async () => {
@@ -91,6 +110,13 @@ describe('PaymentsService', () => {
           transactionId: null,
           rejectionReason: 'Limite excedido',
         }),
+      );
+      expect(metricsService.incrementPaymentsRejected).toHaveBeenCalledWith(
+        'Limite excedido',
+      );
+      expect(metricsService.incrementPaymentsApproved).not.toHaveBeenCalled();
+      expect(metricsService.incrementPaymentsProcessed).toHaveBeenCalledTimes(
+        1,
       );
     });
 
@@ -119,6 +145,9 @@ describe('PaymentsService', () => {
       expect(paymentsRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'payment-1', status: 'approved' }),
       );
+      expect(metricsService.incrementPaymentsProcessed).toHaveBeenCalledTimes(
+        1,
+      );
     });
 
     it('does not reprocess a payment that is already approved or rejected', async () => {
@@ -132,6 +161,9 @@ describe('PaymentsService', () => {
 
       expect(fakePaymentGatewayService.process).not.toHaveBeenCalled();
       expect(paymentsRepository.save).not.toHaveBeenCalled();
+      expect(metricsService.incrementPaymentsProcessed).not.toHaveBeenCalled();
+      expect(metricsService.incrementPaymentsApproved).not.toHaveBeenCalled();
+      expect(metricsService.incrementPaymentsRejected).not.toHaveBeenCalled();
     });
   });
 
