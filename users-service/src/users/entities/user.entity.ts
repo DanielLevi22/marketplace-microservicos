@@ -33,10 +33,17 @@ export class User {
   @Column()
   lastName: string;
 
-  @Column({ type: 'enum', enum: UserRole })
+  @Column({
+    type: process.env.NODE_ENV === 'test' ? 'simple-enum' : 'enum',
+    enum: UserRole,
+  })
   role: UserRole;
 
-  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  @Column({
+    type: process.env.NODE_ENV === 'test' ? 'simple-enum' : 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
   status: UserStatus;
 
   @CreateDateColumn()

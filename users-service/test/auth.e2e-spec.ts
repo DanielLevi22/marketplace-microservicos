@@ -2,12 +2,13 @@ import { randomUUID } from 'crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { User, UserStatus } from '../src/users/entities/user.entity';
+import { typeormTestConfig } from './utils/typeorm-test.config';
 
 interface RegisterResponseBody {
   id: string;
@@ -70,7 +71,17 @@ describe('AuthController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -86,10 +97,9 @@ describe('AuthController (e2e)', () => {
   });
 
   afterEach(async () => {
-    if (createdEmails.length) {
-      await userRepository.delete({ email: createdEmails });
-      createdEmails.length = 0;
-    }
+    // Cada teste roda contra uma instância SQLite em memória própria
+    // (dropSchema + synchronize no beforeEach), destruída junto com o app
+    // em app.close() — não há estado compartilhado entre testes a limpar.
     await app.close();
   });
 

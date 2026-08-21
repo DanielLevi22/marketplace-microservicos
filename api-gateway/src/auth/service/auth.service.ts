@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import {
   HttpException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
@@ -57,7 +58,7 @@ export class AuthService {
         throw error;
       }
 
-      throw new UnauthorizedException('Invalid login credentials');
+      throw new ServiceUnavailableException('Login service unavailable');
     }
   }
 
@@ -74,7 +75,9 @@ export class AuthService {
         throw error;
       }
 
-      throw new UnauthorizedException('Registration failed');
+      throw new ServiceUnavailableException(
+        'Registration service unavailable',
+      );
     }
   }
 }

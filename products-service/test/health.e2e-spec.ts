@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { AppModule } from './../src/app.module';
+import { typeormTestConfig } from './utils/typeorm-test.config';
 
 describe('HealthController (e2e)', () => {
   let app: INestApplication<App>;
@@ -10,7 +12,17 @@ describe('HealthController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

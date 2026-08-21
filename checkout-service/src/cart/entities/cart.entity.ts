@@ -19,7 +19,7 @@ export class Cart {
   userId: string;
 
   @Column({
-    type: 'enum',
+    type: process.env.NODE_ENV === 'test' ? 'simple-enum' : 'enum',
     enum: ['active', 'completed', 'abandoned'],
     default: 'active',
   })

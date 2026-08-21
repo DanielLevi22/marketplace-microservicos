@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { databaseConfig } from '../src/config/database.config';
@@ -12,6 +12,7 @@ import { CartModule } from '../src/cart/cart.module';
 import { OrdersModule } from '../src/orders/orders.module';
 import { AuthModule } from '../src/auth/auth.module';
 import { EventsModule } from '../src/events/events.module';
+import { MetricsModule } from '../src/metrics/metrics.module';
 import {
   ProductResponse,
   ProductsClientService,
@@ -20,6 +21,7 @@ import { PaymentQueueService } from '../src/events/payment-queue/payment-queue.s
 import { Cart } from '../src/cart/entities/cart.entity';
 import { Order } from '../src/orders/entities/order.entity';
 import { OrderResponse } from '../src/orders/orders.service';
+import { typeormTestConfig } from './utils/typeorm-test.config';
 
 describe('Orders (e2e)', () => {
   let app: INestApplication<App>;
@@ -41,12 +43,22 @@ describe('Orders (e2e)', () => {
         OrdersModule,
         AuthModule,
         EventsModule,
+        MetricsModule,
         JwtModule.register({
           secret: process.env.JWT_SECRET,
           signOptions: { expiresIn: '1h' },
         }),
       ],
     })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
       .overrideProvider(ProductsClientService)
       .useValue(productsClientService)
       .overrideProvider(PaymentQueueService)
@@ -265,6 +277,13 @@ describe('Orders (e2e)', () => {
         .set('Authorization', `Bearer ${tokenFor(userId)}`)
         .send({ paymentMethod: 'pix' })
         .expect(201);
+
+      // SQLite (better-sqlite3) stores createdAt with second-level precision,
+      // so two orders created back-to-back can tie. Backdate the first order
+      // to make the DESC ordering assertion below deterministic.
+      await orderRepository.update((first.body as OrderResponse).id, {
+        createdAt: new Date(Date.now() - 5000),
+      });
 
       await addItemToCart(userId, mockProduct({ price: 20 }));
       const second = await request(app.getHttpServer())

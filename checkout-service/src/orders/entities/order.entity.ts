@@ -23,7 +23,7 @@ export class Order {
   total: number;
 
   @Column({
-    type: 'enum',
+    type: process.env.NODE_ENV === 'test' ? 'simple-enum' : 'enum',
     enum: ['pending', 'paid', 'failed', 'cancelled'],
     default: 'pending',
   })
