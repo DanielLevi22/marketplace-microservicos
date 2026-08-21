@@ -4,33 +4,42 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Repository } from 'typeorm';
+import { DataSource, DataSourceOptions, Repository } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { Payment } from '../src/payments/entities/payment.entity';
+import { RabbitmqService } from '../src/events/rabbitmq/rabbitmq.service';
+import { typeormTestConfig } from './utils/typeorm-test.config';
+import { createRabbitmqServiceMock } from './utils/rabbitmq-mock';
 
 describe('Payments (e2e)', () => {
   let app: INestApplication<App>;
   let paymentsRepository: Repository<Payment>;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DataSource)
+      .useFactory({
+        factory: async () => {
+          const dataSource = new DataSource(
+            typeormTestConfig as DataSourceOptions,
+          );
+          return dataSource.initialize();
+        },
+      })
+      .overrideProvider(RabbitmqService)
+      .useValue(createRabbitmqServiceMock())
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
 
     paymentsRepository = moduleFixture.get(getRepositoryToken(Payment));
-    await paymentsRepository.clear();
-  });
-
-  afterAll(async () => {
-    await paymentsRepository.clear();
-    await app.close();
   });
 
   afterEach(async () => {
-    await paymentsRepository.clear();
+    await app.close();
   });
 
   describe('GET /payments/:orderId', () => {

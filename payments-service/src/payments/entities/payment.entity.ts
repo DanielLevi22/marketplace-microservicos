@@ -23,7 +23,7 @@ export class Payment {
   amount: number;
 
   @Column({
-    type: 'enum',
+    type: process.env.NODE_ENV === 'test' ? 'simple-enum' : 'enum',
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   })
@@ -38,7 +38,10 @@ export class Payment {
   @Column({ type: 'varchar', length: 255, nullable: true })
   rejectionReason: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({
+    type: process.env.NODE_ENV === 'test' ? 'datetime' : 'timestamp',
+    nullable: true,
+  })
   processedAt: Date | null;
 
   @CreateDateColumn()
