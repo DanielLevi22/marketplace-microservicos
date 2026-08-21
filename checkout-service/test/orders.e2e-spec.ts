@@ -159,8 +159,8 @@ describe('Orders (e2e)', () => {
       const product = mockProduct();
 
       const addResponse = await addItemToCart(userId, product);
-      const itemId = (addResponse.body as { items: { id: string }[] })
-        .items[0].id;
+      const itemId = (addResponse.body as { items: { id: string }[] }).items[0]
+        .id;
 
       await request(app.getHttpServer())
         .delete(`/cart/items/${itemId}`)
@@ -306,6 +306,73 @@ describe('Orders (e2e)', () => {
 
       await cleanupUser(userA);
       await cleanupUser(userB);
+    });
+  });
+
+  describe('GET /orders/:id', () => {
+    it('returns 401 without a token', async () => {
+      await request(app.getHttpServer())
+        .get(`/orders/${randomUUID()}`)
+        .expect(401);
+    });
+
+    it('returns 404 for a nonexistent id', async () => {
+      const userId = randomUUID();
+
+      await request(app.getHttpServer())
+        .get(`/orders/${randomUUID()}`)
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(404);
+    });
+
+    it("returns 404 for another user's order", async () => {
+      const userA = randomUUID();
+      const userB = randomUUID();
+
+      await addItemToCart(userA, mockProduct({ price: 10 }));
+      const checkoutResponse = await request(app.getHttpServer())
+        .post('/cart/checkout')
+        .set('Authorization', `Bearer ${tokenFor(userA)}`)
+        .send({ paymentMethod: 'pix' })
+        .expect(201);
+      const orderId = (checkoutResponse.body as OrderResponse).id;
+
+      await request(app.getHttpServer())
+        .get(`/orders/${orderId}`)
+        .set('Authorization', `Bearer ${tokenFor(userB)}`)
+        .expect(404);
+
+      await cleanupUser(userA);
+      await cleanupUser(userB);
+    });
+
+    it('returns the full order data for the owner', async () => {
+      const userId = randomUUID();
+      const product = mockProduct({ price: 12.5 });
+
+      await addItemToCart(userId, product, 2);
+      const checkoutResponse = await request(app.getHttpServer())
+        .post('/cart/checkout')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ paymentMethod: 'debit_card' })
+        .expect(201);
+      const orderId = (checkoutResponse.body as OrderResponse).id;
+
+      const response = await request(app.getHttpServer())
+        .get(`/orders/${orderId}`)
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      const body = response.body as OrderResponse;
+      expect(body).toMatchObject({
+        id: orderId,
+        userId,
+        status: 'pending',
+        paymentMethod: 'debit_card',
+        total: 25,
+      });
+
+      await cleanupUser(userId);
     });
   });
 });
