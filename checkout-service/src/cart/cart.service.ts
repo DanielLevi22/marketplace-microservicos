@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './entities/cart.entity';
@@ -88,6 +92,19 @@ export class CartService {
     if (!cart) {
       return { userId, status: 'active', items: [], total: 0 };
     }
+
+    return this.rebuildCartResponse(cart.id);
+  }
+
+  async removeItem(userId: string, itemId: string): Promise<CartResponse> {
+    const cart = await this.findActiveCartEntity(userId);
+    const item = cart?.items.find((cartItem) => cartItem.id === itemId);
+
+    if (!cart || !item) {
+      throw new NotFoundException('Item não encontrado no carrinho');
+    }
+
+    await this.cartItemRepository.delete(itemId);
 
     return this.rebuildCartResponse(cart.id);
   }

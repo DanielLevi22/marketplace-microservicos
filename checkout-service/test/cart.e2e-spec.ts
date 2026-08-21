@@ -299,4 +299,112 @@ describe('Cart (e2e)', () => {
       await cleanupCart(userB);
     });
   });
+
+  describe('DELETE /cart/items/:itemId', () => {
+    it('returns 401 without a token', async () => {
+      await request(app.getHttpServer())
+        .delete(`/cart/items/${randomUUID()}`)
+        .expect(401);
+    });
+
+    it('rejects a nonexistent itemId', async () => {
+      const userId = randomUUID();
+
+      await request(app.getHttpServer())
+        .delete(`/cart/items/${randomUUID()}`)
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(404);
+    });
+
+    it("rejects an itemId that belongs to another user's cart, leaving it unchanged", async () => {
+      const userA = randomUUID();
+      const userB = randomUUID();
+      const product = mockProduct({ price: 15 });
+      productsClientService.findById.mockResolvedValue(product);
+
+      const addResponse = await request(app.getHttpServer())
+        .post('/cart/items')
+        .set('Authorization', `Bearer ${tokenFor(userA)}`)
+        .send({ productId: product.id, quantity: 1 })
+        .expect(201);
+      const itemId = (addResponse.body as CartResponse).items[0].id;
+
+      await request(app.getHttpServer())
+        .delete(`/cart/items/${itemId}`)
+        .set('Authorization', `Bearer ${tokenFor(userB)}`)
+        .expect(404);
+
+      const cartA = await request(app.getHttpServer())
+        .get('/cart')
+        .set('Authorization', `Bearer ${tokenFor(userA)}`)
+        .expect(200);
+      expect((cartA.body as CartResponse).items).toHaveLength(1);
+
+      await cleanupCart(userA);
+      await cleanupCart(userB);
+    });
+
+    it('removes the item and recalculates the total from the remaining items', async () => {
+      const userId = randomUUID();
+      const productA = mockProduct({ price: 10 });
+      const productB = mockProduct({ price: 20 });
+
+      productsClientService.findById.mockResolvedValueOnce(productA);
+      const firstAdd = await request(app.getHttpServer())
+        .post('/cart/items')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ productId: productA.id, quantity: 1 })
+        .expect(201);
+      const itemToRemove = (firstAdd.body as CartResponse).items[0].id;
+
+      productsClientService.findById.mockResolvedValueOnce(productB);
+      await request(app.getHttpServer())
+        .post('/cart/items')
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .send({ productId: productB.id, quantity: 1 })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .delete(`/cart/items/${itemToRemove}`)
+        .set('Authorization', `Bearer ${tokenFor(userId)}`)
+        .expect(200);
+
+      const body = response.body as CartResponse;
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].productId).toBe(productB.id);
+      expect(body.total).toBe(20);
+
+      await cleanupCart(userId);
+    });
+  });
+
+  describe('seller/buyer parity', () => {
+    it.each<['seller' | 'buyer']>([['seller'], ['buyer']])(
+      'supports the full add -> get -> delete flow for role %s',
+      async (role) => {
+        const userId = randomUUID();
+        const product = mockProduct({ price: 25 });
+        productsClientService.findById.mockResolvedValue(product);
+
+        const addResponse = await request(app.getHttpServer())
+          .post('/cart/items')
+          .set('Authorization', `Bearer ${tokenFor(userId, role)}`)
+          .send({ productId: product.id, quantity: 1 })
+          .expect(201);
+        const itemId = (addResponse.body as CartResponse).items[0].id;
+
+        await request(app.getHttpServer())
+          .get('/cart')
+          .set('Authorization', `Bearer ${tokenFor(userId, role)}`)
+          .expect(200);
+
+        await request(app.getHttpServer())
+          .delete(`/cart/items/${itemId}`)
+          .set('Authorization', `Bearer ${tokenFor(userId, role)}`)
+          .expect(200);
+
+        await cleanupCart(userId);
+      },
+    );
+  });
 });

@@ -246,4 +246,62 @@ describe('CartService', () => {
       expect(result.items).toHaveLength(1);
     });
   });
+
+  describe('removeItem', () => {
+    it('throws NotFoundException when the user has no active cart', async () => {
+      cartRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.removeItem(userId, 'item-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(cartItemRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the item does not belong to the user active cart', async () => {
+      cartRepository.findOne.mockResolvedValue({
+        id: 'cart-1',
+        userId,
+        status: 'active',
+        items: [{ id: 'other-item', productId: 'p1' }],
+      });
+
+      await expect(service.removeItem(userId, 'item-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(cartItemRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the item and returns the total recalculated from remaining items', async () => {
+      cartRepository.findOne.mockResolvedValue({
+        id: 'cart-1',
+        userId,
+        status: 'active',
+        items: [
+          { id: 'item-1', productId: 'p1' },
+          { id: 'item-2', productId: 'p2' },
+        ],
+      });
+      cartRepository.findOneOrFail.mockResolvedValue({
+        id: 'cart-1',
+        userId,
+        status: 'active',
+        items: [
+          {
+            id: 'item-2',
+            productId: 'p2',
+            productName: 'B',
+            price: 20,
+            quantity: 1,
+            subtotal: 20,
+          },
+        ],
+      });
+
+      const result = await service.removeItem(userId, 'item-1');
+
+      expect(cartItemRepository.delete).toHaveBeenCalledWith('item-1');
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(20);
+    });
+  });
 });
