@@ -1,34 +1,60 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { HealthService } from './health.service';
-import { HealthCheckService } from 'src/common/health/health-check.service';
+import { HealthCheckService as CustomHealthCheckService } from 'src/common/health/health-check.service';
 import { HealthStatus } from 'src/common/health/health-check.interface';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  HealthCheck,
+  HealthCheckService,
+  HttpHealthIndicator,
+} from '@nestjs/terminus';
+import { serviceConfig } from 'src/config/gateway.config';
 
 @Controller('health')
 export class HealthController {
   constructor(
     private readonly healthService: HealthService,
-    private readonly healthCheckService: HealthCheckService,
+    private readonly customHealthCheckService: CustomHealthCheckService,
+    private readonly health: HealthCheckService,
+    private readonly http: HttpHealthIndicator,
   ) {}
 
   @Get()
   @ApiOperation({ summary: 'Health check do gateway' })
   @ApiResponse({ status: 200, description: 'Gateway está saudável' })
+  @HealthCheck()
   getHealth() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      version: process.env.npm_package_version || '1.0.0',
-    };
+    return this.health.check([
+      () =>
+        this.http.pingCheck('users', `${serviceConfig.users.url}/health`, {
+          timeout: serviceConfig.users.timeout,
+        }),
+      () =>
+        this.http.pingCheck(
+          'products',
+          `${serviceConfig.products.url}/health`,
+          { timeout: serviceConfig.products.timeout },
+        ),
+      () =>
+        this.http.pingCheck(
+          'checkout',
+          `${serviceConfig.checkout.url}/health`,
+          { timeout: serviceConfig.checkout.timeout },
+        ),
+      () =>
+        this.http.pingCheck(
+          'payments',
+          `${serviceConfig.payments.url}/health`,
+          { timeout: serviceConfig.payments.timeout },
+        ),
+    ]);
   }
 
   @Get('services')
   @ApiOperation({ summary: 'Health check de todos os serviços' })
   @ApiResponse({ status: 200, description: 'Status de todos os serviços' })
   async getServicesHealth() {
-    const services = await this.healthCheckService.checkAllServices();
+    const services = await this.customHealthCheckService.checkAllServices();
 
     const overallStatus = services.every(
       (s) => s.status === HealthStatus.HEALTHY,
@@ -58,7 +84,7 @@ export class HealthController {
   @ApiOperation({ summary: 'Health check de um serviço específico' })
   @ApiResponse({ status: 200, description: 'Status do serviço' })
   getServiceHealth(@Param('serviceName') serviceName: string) {
-    const cached = this.healthCheckService.getCachedHealth(serviceName);
+    const cached = this.customHealthCheckService.getCachedHealth(serviceName);
 
     if (!cached) {
       return {
