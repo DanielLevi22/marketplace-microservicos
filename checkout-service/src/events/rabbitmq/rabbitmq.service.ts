@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
+import { MetricsService } from '../../metrics/metrics.service';
 
 @Injectable()
 export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
@@ -14,6 +15,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
   private channel!: amqp.Channel
   constructor(
     private configService: ConfigService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async onModuleInit() {
@@ -116,6 +118,8 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
       if (!published) {
         throw new Error('Failed to publish message to RabbitMQ');
       }
+
+      this.metricsService.incrementRabbitMessagesPublished(routingKey);
     } catch (error) {
       this.logger.error('❌ Error publishing message to RabbitMQ:', error);
     }
