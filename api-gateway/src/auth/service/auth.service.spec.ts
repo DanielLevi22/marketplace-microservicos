@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
-import { HttpException, UnauthorizedException } from '@nestjs/common';
+import { HttpException, ServiceUnavailableException } from '@nestjs/common';
 import { ProxyService } from 'src/proxy/service/proxy.service';
 import { AuthService } from './auth.service';
 import type { RegisterDto } from '../dtos/register.dto';
@@ -62,7 +62,7 @@ describe('AuthService', () => {
       ).rejects.toBe(invalidCredentials);
     });
 
-    it('throws a generic UnauthorizedException on infrastructure failure', async () => {
+    it('throws ServiceUnavailableException on infrastructure failure', async () => {
       proxyService.proxyRequest.mockRejectedValue(new Error('boom'));
 
       await expect(
@@ -70,7 +70,7 @@ describe('AuthService', () => {
           email: 'jane@example.com',
           password: 'wrong',
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(ServiceUnavailableException);
     });
   });
 
@@ -105,11 +105,11 @@ describe('AuthService', () => {
       );
     });
 
-    it('throws a generic UnauthorizedException on infrastructure failure', async () => {
+    it('throws ServiceUnavailableException on infrastructure failure', async () => {
       proxyService.proxyRequest.mockRejectedValue(new Error('boom'));
 
       await expect(service.register({} as RegisterDto)).rejects.toThrow(
-        UnauthorizedException,
+        ServiceUnavailableException,
       );
     });
   });
