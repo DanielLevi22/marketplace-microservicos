@@ -34,9 +34,7 @@ export class ProductsClientService {
         throw new NotFoundException('Produto não encontrado');
       }
 
-      throw new ServiceUnavailableException(
-        'Serviço de produtos indisponível',
-      );
+      throw new ServiceUnavailableException('Serviço de produtos indisponível');
     }
   }
 }
