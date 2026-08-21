@@ -109,10 +109,14 @@ export class CartService {
     return this.rebuildCartResponse(cart.id);
   }
 
-  private async findActiveCartEntity(userId: string): Promise<Cart | null> {
+  async findActiveCartEntity(userId: string): Promise<Cart | null> {
     return this.cartRepository.findOne({
       where: { userId, status: 'active' },
     });
+  }
+
+  async completeCart(cartId: string): Promise<void> {
+    await this.cartRepository.update(cartId, { status: 'completed' });
   }
 
   private async rebuildCartResponse(cartId: string): Promise<CartResponse> {
