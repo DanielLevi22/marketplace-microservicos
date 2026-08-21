@@ -5,12 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './config/database.config';
 import { EventsModule } from './events/events.module';
 import { PaymentsModule } from './payments/payments.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseConfig),
     EventsModule,
     PaymentsModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
