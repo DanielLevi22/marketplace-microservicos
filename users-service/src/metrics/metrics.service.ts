@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import {
+  Counter,
+  Histogram,
+  Registry,
+  collectDefaultMetrics,
+} from 'prom-client';
 
 export interface HttpRequestLabels {
   method: string;
@@ -10,7 +15,9 @@ export interface HttpRequestLabels {
 @Injectable()
 export class MetricsService {
   private readonly registry = new Registry();
-  private readonly httpRequestsTotal: Counter<'method' | 'route' | 'status_code'>;
+  private readonly httpRequestsTotal: Counter<
+    'method' | 'route' | 'status_code'
+  >;
   private readonly httpRequestDurationSeconds: Histogram<
     'method' | 'route' | 'status_code'
   >;
