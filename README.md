@@ -179,6 +179,20 @@ cd observability-stack && docker compose up -d
 
 Todo o tráfego do cliente deve passar pelo `api-gateway` (`:3005`); os demais serviços ficam expostos individualmente apenas para desenvolvimento/depuração.
 
+### Imagens Docker
+
+Cada serviço tem um `Dockerfile` multistage (`build` compila com `nest build`; `production` reinstala só as dependências de produção e copia o `dist/` compilado — imagem final ~330-380MB, baseada em `node:20-alpine`, rodando como usuário não-root e com `HEALTHCHECK` próprio):
+
+```bash
+docker build -t users-service ./users-service
+docker run --rm -p 3000:3000 \
+  -e DB_HOST=host.docker.internal -e DB_PORT=5433 -e DB_USERNAME=postgres -e DB_PASSWORD=postgres -e DB_DATABASE=users_db \
+  -e JWT_SECRET=dev-secret-change-me \
+  users-service
+```
+
+`users-service`, `products-service`, `checkout-service` e `payments-service` têm `better-sqlite3` (usado só nos testes) como dependência opcional do TypeORM — o estágio `build` instala o toolchain nativo (`python3 make g++`) só para compilá-lo; o estágio `production` usa `npm ci --omit=dev --omit=optional`, que pula esse pacote e não precisa do toolchain. O `api-gateway` não tem banco, então seu Dockerfile é mais simples e o `HEALTHCHECK` usa `/health/live` (liveness pura do processo) em vez de `/health` (que depende dos outros 4 serviços estarem no ar).
+
 ### Automatizando com `start-all.sh`
 
 `./start-all.sh` faz os passos acima de uma vez: sobe RabbitMQ, os 4 bancos, espera cada um ficar pronto (`pg_isready`) e inicia os 5 serviços NestJS (`npm run start:dev`) em background, aguardando `/health` de cada um antes de seguir para o próximo. Logs ficam em `.run/logs/<serviço>.log`. Ao final, abre automaticamente no navegador o Swagger do `api-gateway` (`/api`) e, com `--with-observability`, também o dashboard do Grafana.
