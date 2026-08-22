@@ -179,6 +179,30 @@ cd observability-stack && docker compose up -d
 
 Todo o tráfego do cliente deve passar pelo `api-gateway` (`:3005`); os demais serviços ficam expostos individualmente apenas para desenvolvimento/depuração.
 
+### Automatizando com `start-all.sh`
+
+`./start-all.sh` faz os passos acima de uma vez: sobe RabbitMQ, os 4 bancos, espera cada um ficar pronto (`pg_isready`) e inicia os 5 serviços NestJS (`npm run start:dev`) em background, aguardando `/health` de cada um antes de seguir para o próximo. Logs ficam em `.run/logs/<serviço>.log`. Ao final, abre automaticamente no navegador o Swagger do `api-gateway` (`/api`) e, com `--with-observability`, também o dashboard do Grafana.
+
+```bash
+./start-all.sh                        # sobe tudo
+./start-all.sh start --with-observability  # + Prometheus/Grafana
+./start-all.sh status                 # mostra o que está no ar
+./start-all.sh logs api-gateway       # segue o log de um serviço
+./start-all.sh stop                   # derruba processos e containers
+```
+
+### Gerando tráfego e validando o fluxo com `e2e-flow.sh`
+
+`./e2e-flow.sh` exercita a compra completa (registro → login → produto → carrinho → checkout → espera do pagamento) inteiramente via `api-gateway`, cobrindo os dois desfechos do gateway simulado (aprovado e rejeitado por `.99`). Requer `curl` e `jq`.
+
+```bash
+./e2e-flow.sh once                       # roda um ciclo e sai (smoke test; exit code != 0 se algo falhar)
+./e2e-flow.sh loop                       # roda em loop (Ctrl+C para parar), gerando tráfego contínuo
+./e2e-flow.sh loop --interval 10 --cycles 50   # loop limitado, com 10s entre ciclos
+```
+
+Um pool de usuários (`POOL_SIZE=3` por padrão) é registrado uma vez e reaproveitado entre execuções (login cacheado, evitando o rate limit de `/auth/login`); cada ciclo cria produtos e pedidos novos. Use em conjunto com `observability-stack` (`http://localhost:3010`) para ver as métricas de latência, taxa de erro e aprovação/rejeição de pagamento variando em tempo real.
+
 ## Fluxo de trabalho e specs
 
 Cada funcionalidade é documentada antes de implementada, em `<serviço>/docs/specs/NN-nome.md` (spec → PR de escopo → plano → testes, sempre na mesma branch). Ver `CLAUDE.md` para o processo completo. As specs existentes documentam, serviço a serviço, exatamente o que está implementado hoje — este README é o resumo consolidado da arquitetura resultante.
